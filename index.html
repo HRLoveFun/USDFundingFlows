@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mapping U.S. Dollar Funding Flows</title>
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/diagram.css">
+  <link rel="stylesheet" href="css/sidebar.css">
+</head>
+<body>
+  <!-- Header -->
+  <header id="header">
+    <h1>Mapping U.S. Dollar Funding Flows</h1>
+    <div id="time-selector"></div>
+  </header>
+
+  <!-- Main layout: diagram (75%) + sidebar (25%) -->
+  <main id="main">
+    <section id="diagram-container"></section>
+    <aside id="sidebar"></aside>
+  </main>
+
+  <!-- D3.js v7 from CDN -->
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+
+  <!-- App modules (loaded in dependency order) -->
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

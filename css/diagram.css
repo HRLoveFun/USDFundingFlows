@@ -1,0 +1,50 @@
+/* diagram.css — SVG node/edge/section styles, hover transitions */
+
+#diagram-container svg {
+  display: block;
+}
+
+/* ── Sections ────────────────────────────────────────────────────────── */
+g.section rect {
+  pointer-events: none;
+}
+
+g.section text {
+  pointer-events: none;
+  user-select: none;
+}
+
+text.annotation {
+  pointer-events: none;
+  user-select: none;
+}
+
+/* ── Nodes ────────────────────────────────────────────────────────────── */
+g.node {
+  cursor: pointer;
+}
+
+g.node polygon,
+g.node circle,
+g.node rect {
+  transition: opacity 200ms ease;
+}
+
+g.node text {
+  user-select: none;
+}
+
+/* ── Edges ────────────────────────────────────────────────────────────── */
+g.edge path {
+  transition: opacity 200ms ease;
+}
+
+g.edge .edge-label {
+  pointer-events: none;
+  font-weight: 600;
+}
+
+/* ── Dimming for highlight ────────────────────────────────────────────── */
+.dimmed {
+  opacity: 0.12 !important;
+}
