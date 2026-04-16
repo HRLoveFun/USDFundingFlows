@@ -1,4 +1,14 @@
-/* sidebar.css — Accordion panels, buttons, glossary search */
+/* sidebar.css — Accordion panels, buttons, glossary search
+ *
+ * Sidebar Typography (maps to :root CSS custom properties in main.css):
+ *   S1  .panel-header       13px / 600  — Sidebar accordion headers
+ *   S2  .tt-btn             12px / 400  — Transaction-type filter buttons
+ *   S3  .legend-row         12px / 400  — Legend swatch + label rows
+ *   S4  .glossary-list dt   12px / 600  — Glossary term headings
+ *   S5  .glossary-list dd   11px / 400  — Glossary definitions
+ */
+
+/* ── Panel containers ─────────────────────────────────────────────────── */
 
 .sidebar-panel {
   margin-bottom: 8px;
@@ -8,20 +18,24 @@
   overflow: hidden;
 }
 
+/* ── S1: Panel Header (accordion title) ──────────────────────────────── */
+
 .panel-header {
   padding: 10px 14px;
-  font-weight: 600;
-  font-size: 13px;
+  font-size: var(--fs-panel-hdr);
+  font-weight: var(--fw-panel-hdr);
   cursor: pointer;
   background: #eef;
   user-select: none;
+  letter-spacing: var(--ls-header-narrow);
 }
 
 .panel-body {
   padding: 10px 14px;
 }
 
-/* Transaction Type buttons */
+/* ── S2: Transaction Type Filter Buttons ─────────────────────────────── */
+
 .tt-buttons {
   display: flex;
   flex-direction: column;
@@ -35,7 +49,9 @@
   border-left: 4px solid transparent;
   background: #f5f5f5;
   border-radius: 4px;
-  font-size: 12px;
+  font-family: var(--font-family);
+  font-size: var(--fs-btn);
+  font-weight: var(--fw-btn);
   cursor: pointer;
   transition: background 150ms;
 }
@@ -49,13 +65,15 @@
   font-weight: 600;
 }
 
-/* Legend */
+/* ── S3: Legend Items ────────────────────────────────────────────────── */
+
 .legend-subtitle {
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
-  color: #888;
+  color: var(--color-text-muted);
   margin: 8px 0 4px;
+  letter-spacing: 0.3px;
 }
 
 .legend-subtitle:first-child {
@@ -66,7 +84,10 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-family: var(--font-family);
+  font-size: var(--fs-legend);
+  font-weight: var(--fw-legend);
+  line-height: var(--lh-tight);
   margin-bottom: 3px;
 }
 
@@ -82,13 +103,15 @@
   flex-shrink: 0;
 }
 
-/* Glossary */
+/* ── Glossary Search Input ────────────────────────────────────────────── */
+
 .glossary-search {
   width: 100%;
   padding: 6px 10px;
   border: 1px solid #ccc;
   border-radius: 4px;
-  font-size: 12px;
+  font-family: var(--font-family);
+  font-size: var(--fs-btn);
   margin-bottom: 8px;
 }
 
@@ -97,16 +120,19 @@
   overflow-y: auto;
 }
 
+/* ── S4/S5: Glossary Terms & Definitions ─────────────────────────────── */
+
 .glossary-list dt {
-  font-weight: 600;
-  font-size: 12px;
+  font-size: var(--fs-gloss-term);
+  font-weight: var(--fw-gloss-term);
   margin-top: 6px;
 }
 
 .glossary-list dd {
-  font-size: 11px;
-  color: #555;
+  font-size: var(--fs-gloss-def);
+  font-weight: var(--fw-gloss-def);
+  color: var(--color-text-secondary);
   margin-left: 0;
   margin-bottom: 4px;
-  line-height: 1.4;
+  line-height: var(--lh-normal);
 }

@@ -21,9 +21,16 @@ export function render(container, { onNodeHover, onNodeOut, onEdgeHover, onEdgeO
   // Zoom/pan group
   zoomG = svg.append("g").attr("class", "zoom-layer");
 
-  // Enable zoom/pan
+  // Enable zoom/pan — but NOT when interacting with text elements
+  // so that users can select-copy SVG text by dragging.
   const zoom = d3.zoom()
     .scaleExtent([0.3, 4])
+    .filter(function(event) {
+      // Allow default browser behavior (text selection!) when the
+      // pointer lands on <text> or <tspan> elements.
+      var tag = event.target && event.target.nodeName;
+      return !(tag === "text" || tag === "tspan" || tag === "TEXT" || tag === "TSPAN");
+    })
     .on("zoom", (event) => zoomG.attr("transform", event.transform));
   svg.call(zoom);
 

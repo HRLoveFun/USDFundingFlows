@@ -1,5 +1,73 @@
 /* main.css — Global layout, reset, typography */
 
+/* ── Typography Scale System (CSS Custom Properties) ─────────────────────
+ *
+ * Visual Hierarchy:
+ *   L0  Page Title          18px / 600  — <h1> in page header bar
+ *   L1  Section Header      14px / 700  — "FEDERAL RESERVE", "U.S. DOLLAR FUNDING MARKET"
+ *   L2  Sub-Section Header  13px / 700  — "ONSHORE ENTITIES", "OFFSHORE ENTITIES"
+ *   L3  Group Label         11px / 600  — "Banks and Dealers", "Onshore Investors", etc.
+ *   L4  Annotation          12px / 700  — Column headers ("Assets", "Liabilities")
+ *   L5a Node Label (main)   10px / 600  — Entity names inside hexagon/circle/rect shapes
+ *   L5b Node Label (bs-parent) 9px / 500  — Balance-sheet parent rows
+ *   L5c Node Label (bs-child)  8px / 400  — Balance-sheet child sub-rows
+ *   L6  Node Badge          10px / 400  — Data values displayed below each node
+ *   L7  Edge Label           10px / 600  — Flow labels on arrow lines
+ *   L8  Tooltip             12px / 400  — Hover tooltip body text
+ *   S1  Sidebar Panel       13px / 600  — Sidebar accordion headers
+ *   S2  Sidebar Button      12px / 400  — Transaction-type filter buttons
+ *   S3  Legend Item         12px / 400  — Legend swatch + label rows
+ *   S4  Glossary Term       12px / 600  — Glossary term headings
+ *   S5  Glossary Def        11px / 400  — Glossary definitions
+ */
+:root {
+  /* Font family stack */
+  --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica Neue, Arial, sans-serif;
+  --font-mono: "SF Mono", "Fira Code", "Fira Mono", "Roboto Mono", monospace;
+
+  /* Typography scale */
+  --fs-page-title:    18px;  --fw-page-title:    600;
+  --fs-section-hdr:   14px;  --fw-section-hdr:   700;
+  --fs-subsection:    13px;  --fw-subsection:    700;
+  /* Unified sub-group level for: Assets, Liabilities, Banks and Dealers,
+     Onshore Investors, U.S. Government Entities */
+  --fs-sub-group:      12px;  --fw-sub-group:      600;
+  --fs-group-label:   11px;  --fw-group-label:   600;
+  --fs-annotation:    12px;  --fw-annotation:    700;
+  --fs-node-main:     10px;  --fw-node-main:     600;
+  --fs-node-bs-p:      9px;  --fw-node-bs-p:     500;
+  --fs-node-bs-c:      8px;  --fw-node-bs-c:     400;
+  --fs-badge-main:    10px;  --fw-badge-main:    400;
+  --fs-badge-bs:       8px;  --fw-badge-bs:      400;
+  --fs-edge-label:    10px;  --fw-edge-label:    600;
+  --fs-tooltip:       12px;  --fw-tooltip:       400;
+
+  /* Sidebar scale */
+  --fs-panel-hdr:     13px;  --fw-panel-hdr:     600;
+  --fs-btn:           12px;  --fw-btn:           400;
+  --fs-legend:        12px;  --fw-legend:        400;
+  --fs-gloss-term:    12px;  --fw-gloss-term:    600;
+  --fs-gloss-def:     11px;  --fw-gloss-def:     400;
+
+  /* Line heights */
+  --lh-tight:   1.2;
+  --lh-normal:  1.5;
+  --lh-relaxed: 1.6;
+
+  /* Letter spacing for uppercase headers */
+  --ls-header-wide:  1px;
+  --ls-header-narrow: 0.5px;
+
+  /* Colors */
+  --color-text-primary:   #333;
+  --color-text-secondary: #555;
+  --color-text-muted:     #888;
+  --color-text-header:    #757575;
+  --color-accent:         #1A237E;
+  --color-bg-page:        #f5f6fa;
+  --color-bg-diagram:     #fff;
+}
+
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -7,14 +75,15 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  font-size: 14px;
-  color: #333;
-  background: #f5f6fa;
+  font-family: var(--font-family);
+  font-size: var(--fs-tooltip);
+  color: var(--color-text-primary);
+  background: var(--color-bg-page);
   overflow: hidden;
   height: 100vh;
   display: flex;
   flex-direction: column;
+  line-height: var(--lh-normal);
 }
 
 #header {
@@ -22,14 +91,15 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 10px 20px;
-  background: #1A237E;
+  background: var(--color-accent);
   color: #fff;
   flex-shrink: 0;
 }
 
 #header h1 {
-  font-size: 18px;
-  font-weight: 600;
+  font-size: var(--fs-page-title);
+  font-weight: var(--fw-page-title);
+  letter-spacing: var(--ls-header-narrow);
 }
 
 #main {
@@ -51,7 +121,7 @@ body {
   padding: 12px;
 }
 
-/* Tooltip */
+/* Tooltip — L8 level */
 .tooltip {
   position: absolute;
   z-index: 1000;
@@ -59,8 +129,9 @@ body {
   border: 1px solid #bbb;
   border-radius: 5px;
   padding: 8px 12px;
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: var(--fs-tooltip);
+  font-weight: var(--fw-tooltip);
+  line-height: var(--lh-normal);
   max-width: 320px;
   pointer-events: none;
   box-shadow: 0 2px 8px rgba(0,0,0,0.15);
@@ -78,7 +149,7 @@ body {
 }
 
 .time-label {
-  font-size: 13px;
+  font-size: var(--fs-btn);
   font-weight: 500;
 }
 
@@ -88,7 +159,7 @@ body {
   border: 1px solid #7986CB;
   background: #283593;
   color: #fff;
-  font-size: 13px;
+  font-size: var(--fs-btn);
 }
 
 #date-slider {

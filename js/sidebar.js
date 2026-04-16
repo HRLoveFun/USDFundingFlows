@@ -7,18 +7,16 @@
 import { EDGE_COLORS, SHAPE_COLORS, GLOSSARY } from "./constants.js";
 
 const SHAPE_LABELS = {
-  hexagon:   "Banks (Hexagon)",
-  pentagon:  "Dealers (Pentagon)",
-  circle:    "Investors / Funds (Circle)",
+  hexagon:   "Intermediary institutions (Hexagon)",
+  circle:    "Investor Institutions (Circle)",
   rectangle: "Government (Rectangle)",
-  bs_item:   "Balance Sheet Items",
 };
 
 export function initSidebar(container, { onTypeSelect }) {
   container.innerHTML = "";
 
   // ── Panel 1: Arrow Color Types ──────────────────────────────────────
-  const ttPanel = createPanel("Arrow Types", true);
+  const ttPanel = createPanel("TRANSACTION TYPES", true);
   const ttList = document.createElement("div");
   ttList.className = "tt-buttons";
 
@@ -32,7 +30,9 @@ export function initSidebar(container, { onTypeSelect }) {
   for (const [id, cfg] of Object.entries(EDGE_COLORS)) {
     const btn = document.createElement("button");
     btn.className = "tt-btn";
-    btn.textContent = cfg.name;
+    // Display as: "ColorName | TransactionType"
+    const colorLabel = id.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    btn.textContent = `${colorLabel} | ${cfg.name}`;
     btn.dataset.typeId = id;
     btn.style.borderLeftColor = cfg.color;
     ttList.appendChild(btn);
@@ -70,7 +70,7 @@ export function initSidebar(container, { onTypeSelect }) {
   // Arrow colors
   const edgeTitle = document.createElement("div");
   edgeTitle.className = "legend-subtitle";
-  edgeTitle.textContent = "Arrow Colors";
+  edgeTitle.textContent = "Colors";
   legBody.appendChild(edgeTitle);
 
   for (const [id, cfg] of Object.entries(EDGE_COLORS)) {

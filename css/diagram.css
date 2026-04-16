@@ -1,50 +1,235 @@
-/* diagram.css — SVG node/edge/section styles, hover transitions */
+/* diagram.css — SVG node/edge/section styles, hover transitions, typography
+ *
+ * SVG Typography Hierarchy (maps to :root CSS custom properties in main.css):
+ *   L1  .section-header      14px / 700  — Top-level panel titles ("FEDERAL RESERVE", etc.)
+ *   L2  .section-subheader   13px / 700  — Sub-panel titles ("ONSHORE ENTITIES", etc.)
+ *   L3  .group-label         11px / 600  — Group container labels ("Banks and Dealers", etc.)
+ *   L4  text.annotation       12px / 700  — Column headers ("Assets", "Liabilities")
+ *   L5a g.node text          10px / 600  — Main entity labels (hexagon/circle/rect)
+ *   L5b g.node.bs_parent     9px  / 500  — Balance-sheet parent items
+ *   L5c g.node.bs_child      8px  / 400  — Balance-sheet child sub-items
+ *   L6  text.node-badge      10px / 400  (8px for bs) — Data value badges
+ *   L7  g.edge .edge-label   10px / 600  — Flow value labels on edges
+ */
+
+/* ═══════════════════════════════════════════════════════════════════════
+   1. SVG CONTAINER & GLOBAL TEXT DEFAULTS
+   ═══════════════════════════════════════════════════════════════════════ */
 
 #diagram-container svg {
   display: block;
 }
 
-/* ── Sections ────────────────────────────────────────────────────────── */
+/* Default: all SVG text selectable with !important safety net */
+#diagram-container svg text {
+  font-family: var(--font-family);
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   2. SECTIONS — Panel backgrounds and headers (L1–L3)
+   ═══════════════════════════════════════════════════════════════════════ */
+
 g.section rect {
   pointer-events: none;
 }
 
+/* ── L1: Section Header (top-level panel title bar) ──────────────────── */
+/* e.g. "FEDERAL RESERVE", "U.S. DOLLAR FUNDING MARKET"                   */
+/* Rendered as dark bar with white text inside each header section.        */
+g.section-header .header-bar {
+  fill: #424242;
+}
+g.section-header .header-title {
+  fill: #fff;
+  font-size: var(--fs-section-hdr);
+  font-weight: var(--fw-section-hdr);
+  letter-spacing: var(--ls-header-wide);
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+
+/* ── L2: Sub-Section Header (second-level panel title) ───────────────── */
+/* e.g. "BALANCE SHEET", "ONSHORE ENTITIES", "OFFSHORE ENTITIES"           */
+g.section-subheader .subheader-text {
+  fill: var(--color-text-header);
+  font-size: var(--fs-subsection);
+  font-weight: var(--fw-subsection);
+  letter-spacing: var(--ls-header-narrow);
+  text-anchor: middle;
+}
+
+/* ── L3: Group Label (third-level group container) ───────────────────── */
+/* Unified level for: Banks and Dealers, Onshore Investors, U.S. Government Entities,
+   Assets, Liabilities — all share the same font-size, weight, and color */
+g.section-group .group-label-text {
+  fill: var(--color-text-secondary);
+  font-size: var(--fs-sub-group);
+  font-weight: var(--fw-sub-group);
+  text-anchor: middle;
+}
+
+/* Section text base (catch-all) */
 g.section text {
-  pointer-events: none;
-  user-select: none;
+  pointer-events: auto;
+  cursor: text !important;
 }
 
+/* ═══════════════════════════════════════════════════════════════════════
+   3. ANNOTATIONS — Column headers (L4)
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Unified Sub-Group Level (L3+L4 merged) ────────────────────────────
+ * Assets, Liabilities, Banks and Dealers, Onshore Investors,
+ * U.S. Government Entities — all identical typography */
 text.annotation {
-  pointer-events: none;
-  user-select: none;
+  pointer-events: auto;
+  cursor: text !important;
+  font-size: var(--fs-sub-group);
+  font-weight: var(--fw-sub-group);
+  fill: var(--color-text-secondary);
 }
 
-/* ── Nodes ────────────────────────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════════════
+   4. NODES — Entity shapes + labels (L5a/L5b/L5c, L6)
+   ═══════════════════════════════════════════════════════════════════════ */
+
 g.node {
+  /* cursor: pointer moved to .node-shape only, so text children get default/text cursor */
+}
+
+/* Shape gets pointer cursor for hover interaction */
+g.node .node-shape {
   cursor: pointer;
 }
 
+/* Shape transition on hover/dim */
 g.node polygon,
 g.node circle,
-g.node rect {
+g.node ellipse,
+g.node rect,
+g.node .node-shape {
   transition: opacity 200ms ease;
 }
 
-g.node text {
-  user-select: none;
+/* ── L5a: Main node label (hexagon, circle, rectangle entities) ──────── */
+g.node:not(.node-bs_parent):not(.node-bs_child) > text.node-label,
+g.node.hexagon text,
+g.node.circle text,
+g.node.rectangle text {
+  font-size: var(--fs-node-main);
+  font-weight: var(--fw-node-main);
+  fill: var(--color-accent);
+  text-anchor: middle;
+  dominant-baseline: central;
 }
 
-/* ── Edges ────────────────────────────────────────────────────────────── */
+/* ── L5b: Balance Sheet parent label ─────────────────────────────────── */
+g.node.bs_parent > text.node-label,
+g.node.bs_parent text {
+  font-size: var(--fs-node-bs-p);
+  font-weight: var(--fw-node-bs-p);
+  fill: var(--color-accent);
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+
+/* ── L5c: Balance Sheet child label (sub-items) ──────────────────────── */
+g.node.bs_child > text.node-label,
+g.node.bs_child text {
+  font-size: var(--fs-node-bs-c);
+  font-weight: var(--fw-node-bs-c);
+  fill: var(--color-accent);
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+
+/* ── L6: Node data badge (value displayed below shape) ───────────────── */
+text.node-badge {
+  font-size: var(--fs-badge-main);
+  font-weight: var(--fw-badge-main);
+  fill: var(--color-text-secondary);
+  text-anchor: middle;
+}
+
+/* Badge override for balance-sheet nodes (smaller) */
+g.node.bs_parent text.node-badge,
+g.node.bs_child text.node-badge {
+  font-size: var(--fs-badge-bs);
+  font-weight: var(--fw-badge-bs);
+}
+
+/* Ensure all node text is selectable with proper pointer events & text cursor */
+g.node text,
+g.node tspan {
+  pointer-events: auto !important;
+  cursor: text !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   5. EDGES — Flow lines and labels (L7)
+   ═══════════════════════════════════════════════════════════════════════ */
+
 g.edge path {
   transition: opacity 200ms ease;
 }
 
-g.edge .edge-label {
-  pointer-events: none;
-  font-weight: 600;
+/* Smooth curves for long-range edges, crisp lines for straight edges */
+g.edge path[marker-end] {
+  stroke-linejoin: round;
+  stroke-linecap: round;
 }
 
-/* ── Dimming for highlight ────────────────────────────────────────────── */
+/* ── L7: Edge flow label ─────────────────────────────────────────────── */
+g.edge .edge-label {
+  pointer-events: auto;
+  font-size: var(--fs-edge-label);
+  font-weight: var(--fw-edge-label);
+  fill: var(--color-text-primary);
+  cursor: text !important;
+}
+
+/* Edge label background rect */
+g.edge .edge-label-bg {
+  rx: 3;
+  ry: 3;
+  fill: #fff;
+  opacity: 0.88;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   6. PORT MARKERS
+   ═══════════════════════════════════════════════════════════════════════ */
+
+circle.port-marker {
+  pointer-events: none;
+  transition: opacity 200ms ease;
+}
+
+/* Dimmed nodes also dim their ports */
+g.node.dimmed circle.port-marker {
+  opacity: 0.15;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   7. SELECTION VISUAL FEEDBACK
+   ═══════════════════════════════════════════════════════════════════════ */
+
+::selection {
+  background: rgba(63, 81, 181, 0.3);
+}
+
+::-moz-selection {
+  background: rgba(63, 81, 181, 0.3);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   8. DIMMING FOR HIGHLIGHT
+   ═══════════════════════════════════════════════════════════════════════ */
+
 .dimmed {
   opacity: 0.12 !important;
 }
