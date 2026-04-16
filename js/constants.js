@@ -33,93 +33,106 @@ export const SHAPE_SIZES = {
   bs_child:  { width: 175, height: 26 },
 };
 
-// ── Connection ports per shape type ──────────────────────────────────────
-// Each port is an {x, y} offset from the shape center.
-// Ports are ordered around the perimeter; the edge router assigns unique ports
-// so that each connection point serves at most one edge.
+// ── Grid-based connection ports per shape type ───────────────────────────
+// Each port is an {x, y} offset from the shape center, computed as the
+// intersection of the shape boundary with a 10px grid. This yields many
+// more candidate ports than the old hand-picked list, enabling the edge
+// router to find shorter, overlap-free connections.
+const GRID = 10;  // grid resolution in SVG px
+
+/** Deduplicate ports within ±1px to avoid near-duplicates from rounding. */
+function dedupPorts(pts) {
+  const out = [];
+  for (const p of pts) {
+    if (!out.some(q => Math.abs(q.x - p.x) < 1 && Math.abs(q.y - p.y) < 1)) {
+      out.push({ x: Math.round(p.x * 10) / 10, y: Math.round(p.y * 10) / 10 });
+    }
+  }
+  return out;
+}
+
+/** Rectangle / bs_parent / bs_child grid ports. */
+function rectGridPorts(w, h) {
+  const hw = w / 2, hh = h / 2;
+  const pts = [];
+  // Top & bottom edges: every GRID px along x
+  for (let x = Math.ceil(-hw / GRID) * GRID; x <= hw; x += GRID) {
+    pts.push({ x, y: -hh });
+    pts.push({ x, y:  hh });
+  }
+  // Left & right edges: every GRID px along y
+  for (let y = Math.ceil(-hh / GRID) * GRID; y <= hh; y += GRID) {
+    pts.push({ x: -hw, y });
+    pts.push({ x:  hw, y });
+  }
+  // Always include the 4 corners
+  pts.push({ x: -hw, y: -hh }, { x: hw, y: -hh }, { x: hw, y: hh }, { x: -hw, y: hh });
+  return dedupPorts(pts);
+}
+
+/** Hexagon grid ports — intersect 6 edges with horizontal/vertical grid lines. */
+function hexGridPorts(rx, ry) {
+  // 6 vertices
+  const verts = [];
+  for (let i = 0; i < 6; i++) {
+    const a = (Math.PI / 3) * i;
+    verts.push({ x: rx * Math.cos(a), y: ry * Math.sin(a) });
+  }
+  const pts = [...verts]; // always include vertices
+  // For each segment, find grid crossings
+  for (let i = 0; i < 6; i++) {
+    const A = verts[i], B = verts[(i + 1) % 6];
+    const dx = B.x - A.x, dy = B.y - A.y;
+    // Horizontal grid lines crossing this segment
+    if (Math.abs(dy) > 0.01) {
+      const yMin = Math.min(A.y, B.y), yMax = Math.max(A.y, B.y);
+      for (let gy = Math.ceil(yMin / GRID) * GRID; gy <= yMax; gy += GRID) {
+        const t = (gy - A.y) / dy;
+        if (t >= 0 && t <= 1) pts.push({ x: A.x + t * dx, y: gy });
+      }
+    }
+    // Vertical grid lines crossing this segment
+    if (Math.abs(dx) > 0.01) {
+      const xMin = Math.min(A.x, B.x), xMax = Math.max(A.x, B.x);
+      for (let gx = Math.ceil(xMin / GRID) * GRID; gx <= xMax; gx += GRID) {
+        const t = (gx - A.x) / dx;
+        if (t >= 0 && t <= 1) pts.push({ x: gx, y: A.y + t * dy });
+      }
+    }
+  }
+  return dedupPorts(pts);
+}
+
+/** Ellipse grid ports — solve for grid-line intersections analytically. */
+function ellipseGridPorts(rx, ry) {
+  const pts = [];
+  // Horizontal grid lines: y = k  →  x = ±rx·√(1 - (k/ry)²)
+  for (let k = Math.ceil(-ry / GRID) * GRID; k <= ry; k += GRID) {
+    const ratio = k / ry;
+    if (Math.abs(ratio) > 1) continue;
+    const xVal = rx * Math.sqrt(1 - ratio * ratio);
+    pts.push({ x:  xVal, y: k });
+    pts.push({ x: -xVal, y: k });
+  }
+  // Vertical grid lines: x = k  →  y = ±ry·√(1 - (k/rx)²)
+  for (let k = Math.ceil(-rx / GRID) * GRID; k <= rx; k += GRID) {
+    const ratio = k / rx;
+    if (Math.abs(ratio) > 1) continue;
+    const yVal = ry * Math.sqrt(1 - ratio * ratio);
+    pts.push({ x: k, y:  yVal });
+    pts.push({ x: k, y: -yVal });
+  }
+  // Cardinal points
+  pts.push({ x: rx, y: 0 }, { x: -rx, y: 0 }, { x: 0, y: ry }, { x: 0, y: -ry });
+  return dedupPorts(pts);
+}
+
 export const SHAPE_PORTS = {
-  /** Long hexagon: 12 ports — vertices + edge midpoints */
-  hexagon: (() => {
-    const rx = SHAPE_SIZES.hexagon.rx;
-    const ry = SHAPE_SIZES.hexagon.ry;
-    const pts = [];
-    for (let i = 0; i < 6; i++) {
-      const a = (Math.PI / 3) * i;
-      // Vertex
-      pts.push({ x: rx * Math.cos(a), y: ry * Math.sin(a), angle: a });
-      // Edge midpoint (half-step)
-      const ma = (Math.PI / 3) * (i + 0.5);
-      pts.push({ x: rx * Math.cos(ma), y: ry * Math.sin(ma), angle: ma });
-    }
-    return pts;
-  })(),
-  /** Ellipse: 16 ports — evenly spaced around elliptical circumference */
-  circle: (() => {
-    const rx = SHAPE_SIZES.circle.rx;
-    const ry = SHAPE_SIZES.circle.ry;
-    const pts = [];
-    for (let i = 0; i < 16; i++) {
-      const a = (2 * Math.PI / 16) * i;
-      pts.push({ x: rx * Math.cos(a), y: ry * Math.sin(a), angle: a });
-    }
-    return pts;
-  })(),
-  /** Rectangle: 14 ports — 4 corners + distributed along each edge */
-  rectangle: (() => {
-    const w = SHAPE_SIZES.rectangle.width / 2;
-    const h = SHAPE_SIZES.rectangle.height / 2;
-    // Order: top(L→R), right(T→B), bottom(R→L), left(B→T)
-    return [
-      { x: -w + w/3, y: -h, angle: -Math.PI/2 },     // top-left third
-      { x:          0, y: -h, angle: -Math.PI/2 },     // top-center
-      { x:  w - w/3, y: -h, angle: -Math.PI/2 },       // top-right third
-      { x:  w, y: -h + h/2, angle: 0 },                // right-top half
-      { x:  w, y:  h/2,       angle: 0 },              // right-bottom half
-      { x:  w - w/3, y:  h, angle: Math.PI/2 },        // bottom-right third
-      { x:          0, y:  h, angle: Math.PI/2 },      // bottom-center
-      { x: -w + w/3, y:  h, angle: Math.PI/2 },        // bottom-left third
-      { x: -w, y:  h/2,       angle: Math.PI },        // left-bottom half
-      { x: -w, y: -h + h/2, angle: Math.PI },          // left-top half
-      // Extra corner ports for high-degree nodes
-      { x: -w, y: -h, angle: -3*Math.PI/4 },           // top-left corner
-      { x:  w, y: -h, angle: -Math.PI/4 },             // top-right corner
-      { x:  w, y:  h, angle: Math.PI/4 },              // bottom-right corner
-      { x: -w, y:  h, angle: 3*Math.PI/4 },            // bottom-left corner
-    ];
-  })(),
-  /** bs_parent: 10 ports — wide rectangle */
-  bs_parent: (() => {
-    const w = SHAPE_SIZES.bs_parent.width / 2;
-    const h = SHAPE_SIZES.bs_parent.height / 2;
-    return [
-      { x: -w*0.6, y: -h, angle: -Math.PI/2 },
-      { x:      0,  y: -h, angle: -Math.PI/2 },
-      { x:  w*0.6, y: -h, angle: -Math.PI/2 },
-      { x:  w, y: 0,  angle: 0 },
-      { x:  w*0.6, y:  h, angle: Math.PI/2 },
-      { x:      0,  y:  h, angle: Math.PI/2 },
-      { x: -w*0.6, y:  h, angle: Math.PI/2 },
-      { x: -w, y: 0,  angle: Math.PI },
-      // corners
-      { x: -w, y: -h, angle: -3*Math.PI/4 },
-      { x:  w, y: -h, angle: -Math.PI/4 },
-    ];
-  })(),
-  /** bs_child: 8 ports — narrow rectangle */
-  bs_child: (() => {
-    const w = SHAPE_SIZES.bs_child.width / 2;
-    const h = SHAPE_SIZES.bs_child.height / 2;
-    return [
-      { x: -w*0.5, y: -h, angle: -Math.PI/2 },
-      { x:       0, y: -h, angle: -Math.PI/2 },
-      { x:  w*0.5, y: -h, angle: -Math.PI/2 },
-      { x:  w, y: 0,  angle: 0 },
-      { x:  w*0.5, y:  h, angle: Math.PI/2 },
-      { x:       0, y:  h, angle: Math.PI/2 },
-      { x: -w*0.5, y:  h, angle: Math.PI/2 },
-      { x: -w, y: 0,  angle: Math.PI },
-    ];
-  })(),
+  hexagon:   hexGridPorts(SHAPE_SIZES.hexagon.rx, SHAPE_SIZES.hexagon.ry),
+  circle:    ellipseGridPorts(SHAPE_SIZES.circle.rx, SHAPE_SIZES.circle.ry),
+  rectangle: rectGridPorts(SHAPE_SIZES.rectangle.width, SHAPE_SIZES.rectangle.height),
+  bs_parent: rectGridPorts(SHAPE_SIZES.bs_parent.width, SHAPE_SIZES.bs_parent.height),
+  bs_child:  rectGridPorts(SHAPE_SIZES.bs_child.width, SHAPE_SIZES.bs_child.height),
 };
 
 // ── Node category colors (for sidebar legend) ───────────────────────────
@@ -329,6 +342,27 @@ export const EDGES = [
 
   // ── Pink ────────────────────────────────────────────────────────────
   { id: "pink_fbank_primemmf",    source: "foreign_banks",  target: "prime_mmf",              color: "pink", seriesIds: [],            label: "" },
+
+  // ── Magenta: Securities purchases (from market regions to U.S. Gov Entities) ──
+  // Source = section/dashed-box ID (connects from region edge), Target = node or region
+  { id: "magenta_banksdealers_govent",   source: "sec:banks_dealers",    target: "sec:gov_entities", color: "magenta", seriesIds: [], label: "" },
+  { id: "magenta_onshoreinv_govent",     source: "sec:onshore_inv",      target: "sec:gov_entities", color: "magenta", seriesIds: [], label: "" },
+  { id: "magenta_offshore_govent",       source: "sec:offshore",         target: "sec:gov_entities", color: "magenta", seriesIds: [], label: "" },
+  { id: "magenta_dashedgse_ustreas",     source: "sec:dash_gse_pair",    target: "us_treasury",      color: "magenta", seriesIds: [], label: "" },
+
+  // ── Fed balance sheet asset outflows ───────────────────────────────
+  { id: "red_primarycred_usbanks",source: "bs_primary_credit", target: "us_banks",             color: "red",    seriesIds: [],          label: "Primary Credit" },
+  { id: "purple_cbswaps_fcboff",  source: "bs_cb_swaps",     target: "fcb_swf_supra_offshore", color: "purple", seriesIds: ["SWPT"],    label: "CB Swaps" },
+
+  // ── Fed balance sheet liability links ─────────────────────────────
+  { id: "red_fhlbdep_fhlb",       source: "bs_fhlb_deposits", target: "fhlb",                  color: "red",    seriesIds: [],          label: "" },
+  { id: "red_resbal_usfbo",       source: "bs_reserve_balances", target: "us_fbo",             color: "red",    seriesIds: [],          label: "" },
+
+  // ── Light green: Fed funds lending ────────────────────────────────
+  { id: "light_green_fhlb_usbanks", source: "fhlb",          target: "us_banks",               color: "light_green", seriesIds: [],     label: "" },
+
+  // ── Brown: FHLB advances (reverse direction) ─────────────────────
+  { id: "brown_fhlb_usbanks",     source: "fhlb",            target: "us_banks",               color: "brown", seriesIds: [],           label: "" },
 ];
 
 // ── Glossary ────────────────────────────────────────────────────────────

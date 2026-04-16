@@ -4,24 +4,231 @@
  * Each node shape exposes multiple ports; the router assigns a unique port per edge,
  * guaranteeing that each connection point is used by at most one edge.
  */
-import { EDGES, NODES, EDGE_COLORS, SHAPE_PORTS, SHAPE_SIZES } from "./constants.js";
+import { EDGES, NODES, EDGE_COLORS, SHAPE_PORTS, SHAPE_SIZES, SECTIONS } from "./constants.js";
 import { isSelecting } from "./tooltip.js";
+
+/**
+ * Resolve an endpoint (node-id or "sec:sectionId") to its {x, y} center
+ * and optionally return the section rect if it's a section reference.
+ */
+function resolveEndpoint(id) {
+  if (id.startsWith("sec:")) {
+    const sec = sectionMap[id.slice(4)];
+    if (!sec) return { x: 0, y: 0, isSection: true, rect: null };
+    return {
+      x: sec.x + sec.w / 2,
+      y: sec.y + sec.h / 2,
+      isSection: true,
+      rect: sec,
+    };
+  }
+  const n = nodeMap[id];
+  return { x: n?.x ?? 0, y: n?.y ?? 0, isSection: false, rect: null };
+}
+
+/**
+ * Compute the connection point on a section's edge facing toward (targetX, targetY).
+ * Returns {x, y} on the rectangle perimeter.
+ */
+function sectionEdgePoint(rect, targetX, targetY) {
+  const cx = rect.x + rect.w / 2;
+  const cy = rect.y + rect.h / 2;
+  const dx = targetX - cx;
+  const dy = targetY - cy;
+  // Degenerate case
+  if (dx === 0 && dy === 0) return { x: cx, y: rect.y }; // default to top edge
+
+  // Find which edge the ray from center to target hits
+  // Parametric: center + t * (dx, dy), find t where it intersects rect bounds
+  let tMin = Infinity;
+  let hitX = cx, hitY = rect.y;
+
+  // Four edges of the rectangle
+  const candidates = [
+    { nx: 1, ny: 0, val: rect.x + rect.w },  // right
+    { nx: -1, ny: 0, val: rect.x },           // left
+    { nx: 0, ny: 1, val: rect.y + rect.h },   // bottom
+    { nx: 0, ny: -1, val: rect.y },           // top
+  ];
+
+  for (const e of candidates) {
+    const denom = e.nx * dx + e.ny * dy;
+    if (Math.abs(denom) < 1e-6) continue; // parallel
+    const t = (e.val - (e.nx * cx + e.ny * cy)) / denom;
+    if (t > 0 && t < tMin) {
+      const px = cx + t * dx;
+      const py = cy + t * dy;
+      // Check if point is within edge segment
+      if (px >= rect.x - 1 && px <= rect.x + rect.w + 1 &&
+          py >= rect.y - 1 && py <= rect.y + rect.h + 1) {
+        tMin = t;
+        hitX = px;
+        hitY = py;
+      }
+    }
+  }
+
+  return { x: hitX, y: hitY };
+}
 
 const nodeMap = Object.fromEntries(NODES.map(n => [n.id, n]));
 
-// ── Port allocation: one port per edge, per node side ─────────────────────
+// ── Section map for region-edge connections ─────────────────────────────
+const sectionMap = Object.fromEntries(SECTIONS.map(s => [s.id, s]));
+
+// ══════════════════════════════════════════════════════════════════════════
+// Phase 2: Collision geometry & line-of-sight testing
+// ══════════════════════════════════════════════════════════════════════════
+
+const PAD = 4; // padding around shapes for collision detection
+
+/** Pre-compute collision primitives for all nodes. */
+const collisionShapes = NODES.map(n => {
+  const sz = SHAPE_SIZES[n.shape];
+  if (n.shape === "hexagon") {
+    const rx = sz.rx + PAD, ry = sz.ry + PAD;
+    const verts = [];
+    for (let i = 0; i < 6; i++) {
+      const a = (Math.PI / 3) * i;
+      verts.push({ x: n.x + rx * Math.cos(a), y: n.y + ry * Math.sin(a) });
+    }
+    return { id: n.id, type: "polygon", verts };
+  }
+  if (n.shape === "circle") {
+    return { id: n.id, type: "ellipse", cx: n.x, cy: n.y, rx: sz.rx + PAD, ry: sz.ry + PAD };
+  }
+  // Rectangle shapes: rectangle, bs_parent, bs_child
+  const w = sz.width, h = sz.height;
+  return {
+    id: n.id, type: "rect",
+    xMin: n.x - w / 2 - PAD, yMin: n.y - h / 2 - PAD,
+    xMax: n.x + w / 2 + PAD, yMax: n.y + h / 2 + PAD,
+  };
+});
+
+/** Segment (x1,y1)→(x2,y2) vs AABB test. */
+function segIntersectsRect(x1, y1, x2, y2, r) {
+  // Cohen-Sutherland-style: quick reject then parametric check
+  let tMin = 0, tMax = 1;
+  const dx = x2 - x1, dy = y2 - y1;
+  const edges = [
+    { p: -dx, q: x1 - r.xMin },
+    { p:  dx, q: r.xMax - x1 },
+    { p: -dy, q: y1 - r.yMin },
+    { p:  dy, q: r.yMax - y1 },
+  ];
+  for (const { p, q } of edges) {
+    if (Math.abs(p) < 1e-9) { if (q < 0) return false; continue; }
+    const t = q / p;
+    if (p < 0) { if (t > tMax) return false; if (t > tMin) tMin = t; }
+    else       { if (t < tMin) return false; if (t < tMax) tMax = t; }
+  }
+  return tMin <= tMax;
+}
+
+/** Segment vs convex polygon (vertices in order). */
+function segIntersectsPolygon(x1, y1, x2, y2, verts) {
+  const n = verts.length;
+  for (let i = 0; i < n; i++) {
+    const A = verts[i], B = verts[(i + 1) % n];
+    if (segsIntersect(x1, y1, x2, y2, A.x, A.y, B.x, B.y)) return true;
+  }
+  // Also check if segment start is fully inside polygon
+  if (pointInConvex(x1, y1, verts)) return true;
+  return false;
+}
+
+function segsIntersect(ax, ay, bx, by, cx, cy, dx, dy) {
+  const d1 = cross(cx, cy, dx, dy, ax, ay);
+  const d2 = cross(cx, cy, dx, dy, bx, by);
+  const d3 = cross(ax, ay, bx, by, cx, cy);
+  const d4 = cross(ax, ay, bx, by, dx, dy);
+  if (((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) &&
+      ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))) return true;
+  if (Math.abs(d1) < 1e-6 && onSegment(cx, cy, dx, dy, ax, ay)) return true;
+  if (Math.abs(d2) < 1e-6 && onSegment(cx, cy, dx, dy, bx, by)) return true;
+  if (Math.abs(d3) < 1e-6 && onSegment(ax, ay, bx, by, cx, cy)) return true;
+  if (Math.abs(d4) < 1e-6 && onSegment(ax, ay, bx, by, dx, dy)) return true;
+  return false;
+}
+function cross(ox, oy, ax, ay, bx, by) { return (ax-ox)*(by-oy)-(ay-oy)*(bx-ox); }
+function onSegment(px, py, qx, qy, rx, ry) {
+  return rx >= Math.min(px,qx)-1e-6 && rx <= Math.max(px,qx)+1e-6 &&
+         ry >= Math.min(py,qy)-1e-6 && ry <= Math.max(py,qy)+1e-6;
+}
+function pointInConvex(px, py, verts) {
+  let pos = 0, neg = 0;
+  for (let i = 0; i < verts.length; i++) {
+    const A = verts[i], B = verts[(i+1)%verts.length];
+    const d = (B.x-A.x)*(py-A.y) - (B.y-A.y)*(px-A.x);
+    if (d > 0) pos++; else if (d < 0) neg++;
+    if (pos && neg) return false;
+  }
+  return true;
+}
+
+/** Segment vs ellipse. */
+function segIntersectsEllipse(x1, y1, x2, y2, e) {
+  // Transform to unit circle: u = (x-cx)/rx, v = (y-cy)/ry
+  const u1 = (x1 - e.cx) / e.rx, v1 = (y1 - e.cy) / e.ry;
+  const u2 = (x2 - e.cx) / e.rx, v2 = (y2 - e.cy) / e.ry;
+  const du = u2 - u1, dv = v2 - v1;
+  const A = du*du + dv*dv;
+  const B = 2*(u1*du + v1*dv);
+  const C = u1*u1 + v1*v1 - 1;
+  const disc = B*B - 4*A*C;
+  if (disc < 0) return false;
+  const sqrtD = Math.sqrt(disc);
+  const t1 = (-B - sqrtD) / (2*A);
+  const t2 = (-B + sqrtD) / (2*A);
+  // Intersection if either root is in [0,1]
+  if ((t1 >= 0 && t1 <= 1) || (t2 >= 0 && t2 <= 1)) return true;
+  // Or segment is entirely inside
+  if (t1 < 0 && t2 > 1) return true;
+  return false;
+}
+
+/**
+ * Check if a line segment is blocked by any node shape.
+ * @param {Set<string>} excludeIds - node IDs to skip (source + target)
+ */
+function isSegmentBlocked(x1, y1, x2, y2, excludeIds) {
+  for (const s of collisionShapes) {
+    if (excludeIds.has(s.id)) continue;
+    switch (s.type) {
+      case "rect":    if (segIntersectsRect(x1, y1, x2, y2, s)) return true; break;
+      case "polygon": if (segIntersectsPolygon(x1, y1, x2, y2, s.verts)) return true; break;
+      case "ellipse": if (segIntersectsEllipse(x1, y1, x2, y2, s)) return true; break;
+    }
+  }
+  return false;
+}
+
+/** Check if a polyline (array of {x,y} waypoints) is blocked. */
+function isPolylineBlocked(waypoints, excludeIds) {
+  for (let i = 0; i < waypoints.length - 1; i++) {
+    if (isSegmentBlocked(waypoints[i].x, waypoints[i].y,
+                         waypoints[i+1].x, waypoints[i+1].y, excludeIds))
+      return true;
+  }
+  return false;
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// Phase 3: Port allocation — distance-based with sorted scan & convergence
+// ══════════════════════════════════════════════════════════════════════════
+
 // Tracks which local-port index has been assigned for each (nodeId, direction).
-// direction = "out" for source, "in" for target.
 const usedPorts = new Map(); // key: `${nodeId}_${dir}` → Set of port indices
 
 /**
- * Pick the best available port on *node* facing toward *target*.
- * Prefers the port whose angle most closely aligns with the direction to target.
- * Guarantees no two edges share the same (node, dir) port index.
+ * Allocate the best available port on *node* facing toward *target*.
+ * Uses distance-sorted scan with early termination (convergence after 5 non-improving).
+ * Guarantees port uniqueness per (nodeId, dir).
  */
 function allocatePort(nodeId, targetX, targetY, dir) {
   const node = nodeMap[nodeId];
-  if (!node) return { x: node?.x ?? 0, y: node?.y ?? 0 };
+  if (!node) return { x: 0, y: 0 };
 
   const ports = SHAPE_PORTS[node.shape];
   if (!ports || ports.length === 0) return { x: node.x, y: node.y };
@@ -30,34 +237,29 @@ function allocatePort(nodeId, targetX, targetY, dir) {
   if (!usedPorts.has(key)) usedPorts.set(key, new Set());
   const taken = usedPorts.get(key);
 
-  // Direction vector from node center to target
-  const dx = targetX - node.x;
-  const dy = targetY - node.y;
-  const rawAngle = Math.atan2(dy, dx);
-
-  // Score each available port by angular alignment; pick the best.
-  let bestIdx = -1;
-  let bestDiff = Infinity;
+  // Build distance-sorted index list (only untaken ports)
+  const indices = [];
   for (let i = 0; i < ports.length; i++) {
     if (taken.has(i)) continue;
     const p = ports[i];
-    let diff = Math.abs(normalizeAngle(p.angle - rawAngle));
-    // Wrap-around: prefer smaller diff even across ±π boundary
-    if (diff > Math.PI) diff = 2 * Math.PI - diff;
-    if (diff < bestDiff) {
-      bestDiff = diff;
-      bestIdx = i;
-    }
+    const dx = (node.x + p.x) - targetX;
+    const dy = (node.y + p.y) - targetY;
+    indices.push({ i, dist: dx * dx + dy * dy }); // squared distance for sorting
   }
+  indices.sort((a, b) => a.dist - b.dist);
 
-  // Fallback: if all ports are taken, reuse the least-bad one
-  if (bestIdx === -1) {
-    bestIdx = 0;
+  // Pick the closest available port (convergence is already guaranteed by sorted order)
+  let bestIdx = indices.length > 0 ? indices[0].i : 0;
+
+  // Fallback: if all ports taken, scan all for closest
+  if (indices.length === 0) {
+    let bestDist = Infinity;
     for (let i = 0; i < ports.length; i++) {
       const p = ports[i];
-      let diff = Math.abs(normalizeAngle(p.angle - rawAngle));
-      if (diff > Math.PI) diff = 2 * Math.PI - diff;
-      if (diff < bestDiff) { bestDiff = diff; bestIdx = i; }
+      const dx = (node.x + p.x) - targetX;
+      const dy = (node.y + p.y) - targetY;
+      const d = dx * dx + dy * dy;
+      if (d < bestDist) { bestDist = d; bestIdx = i; }
     }
   } else {
     taken.add(bestIdx);
@@ -67,22 +269,17 @@ function allocatePort(nodeId, targetX, targetY, dir) {
   return { x: node.x + p.x, y: node.y + p.y };
 }
 
-function normalizeAngle(a) {
-  while (a > Math.PI) a -= 2 * Math.PI;
-  while (a < -Math.PI) a += 2 * Math.PI;
-  return a;
-}
-
 // ── Parallel-edge offset grouping ────────────────────────────────────────
-// Edges sharing the same ordered pair get an L-offset so they don't overlap.
+// Edges sharing the same UNORDERED pair (A↔B) get a unique offset so
+// bidirectional edges between the same nodes don't overlap.
 function computeOffsets() {
-  const groups = {};
+  const biGroups = {};
   EDGES.forEach(e => {
-    const key = `${e.source}|${e.target}`;
-    (groups[key] ??= []).push(e.id);
+    const biKey = [e.source, e.target].sort().join('|');
+    (biGroups[biKey] ??= []).push(e.id);
   });
   const offsets = {};
-  for (const ids of Object.values(groups)) {
+  for (const ids of Object.values(biGroups)) {
     ids.forEach((id, i) => {
       offsets[id] = { index: i, total: ids.length };
     });
@@ -91,116 +288,196 @@ function computeOffsets() {
 }
 
 const OFFSETS = computeOffsets();
-const OFFSET_PX = 16;
+const OFFSET_PX = 8;
 
-/** Build a clean edge path: straight line with optional gentle curve for long-range flows. */
-function edgePath(edge) {
-  const s = nodeMap[edge.source];
-  const t = nodeMap[edge.target];
-  if (!s || !t) return "";
+// ── Cross-panel routing helpers ─────────────────────────────────────────
+const FED_PANEL_RIGHT = 520;
+const CORRIDOR_X = 530;
 
-  // Allocate unique ports
-  const sp = allocatePort(edge.source, t.x, t.y, "out");
-  const tp = allocatePort(edge.target, s.x, s.y, "in");
-
-  // Parallel offset for edges sharing the same (source, target)
-  const { index, total } = OFFSETS[edge.id] || { index: 0, total: 1 };
-  const offset = (index - (total - 1) / 2) * OFFSET_PX;
-
-  // Direction vectors
-  const dx = tp.x - sp.x;
-  const dy = tp.y - sp.y;
-  const len = Math.sqrt(dx * dx + dy * dy) || 1;
-
-  // Perpendicular offset vector for parallel edge separation
-  const ox = (-dy / len) * offset;
-  const oy = (dx / len) * offset;
-
-  const startX = sp.x + ox;
-  const startY = sp.y + oy;
-  const endX = tp.x + ox;
-  const endY = tp.y + oy;
-
-  // Determine if we need a curved path vs straight line
-  // Use curve when: crossing large distance vertically AND horizontally,
-  // or source/target are on opposite sides (would create awkward angle)
-  const needsCurve = shouldUseCurve(s, t, sp, tp);
-
-  if (!needsCurve) {
-    // Clean straight line (matching the reference diagram style)
-    return `M ${startX},${startY} L ${endX},${endY}`;
-  }
-
-  // Gentle quadratic bezier curve — much smoother than orthogonal elbow
-  // Control point placed along dominant axis to create natural arc
-  const midX = (startX + endX) / 2;
-  const midY = (startY + endY) / 2;
-
-  let ctrlX, ctrlY;
-  if (Math.abs(dx) >= Math.abs(dy)) {
-    // Mostly horizontal → bulge horizontally
-    ctrlX = midX;
-    ctrlY = Math.abs(dy) > 200 ? startY + dy * 0.3 : midY;
-  } else {
-    // Mostly vertical → bulge vertically
-    ctrlY = midY;
-    ctrlX = Math.abs(dx) > 200 ? startX + dx * 0.3 : midX;
-  }
-
-  return `M ${startX},${startY} Q ${ctrlX},${ctrlY} ${endX},${endY}`;
+function isFedNode(id) {
+  const n = nodeMap[id];
+  return n && n.x < FED_PANEL_RIGHT;
 }
 
 /**
- * Determine whether an edge should use curved routing.
- * Curves are used for long-distance cross-panel flows that would otherwise
- * cut awkwardly through intermediate content areas.
+ * Build edge path with obstacle-aware routing:
+ * - Cross-panel (Fed ↔ Market): orthogonal L-shaped via corridor (unchanged)
+ * - Intra-panel straight: when line-of-sight is clear
+ * - Intra-panel polyline: when straight line crosses intermediate shapes (max 2 turns)
+ * Stores _labelPos for efficient label placement.
  */
-function shouldUseCurve(sourceNode, targetNode, sp, tp) {
-  const dx = Math.abs(tp.x - sp.x);
-  const dy = Math.abs(tp.y - sp.y);
+function edgePath(edge) {
+  const srcInfo = resolveEndpoint(edge.source);
+  const tgtInfo = resolveEndpoint(edge.target);
+  if (!srcInfo || !tgtInfo) { edge._labelPos = { x: 0, y: 0 }; return ""; }
 
-  // Always use straight line for short distances
-  if (dx < 300 && dy < 150) return false;
+  const srcIsSec = edge.source.startsWith("sec:");
+  const tgtIsSec = edge.target.startsWith("sec:");
+  const tgtCX = tgtInfo.x, tgtCY = tgtInfo.y;
+  const srcCX = srcInfo.x, srcCY = srcInfo.y;
 
-  // Use curve for very long vertical spans (Fed→bottom entities)
-  if (dy > 500 && dx > 400) return true;
+  // Initial port / section-edge-point allocation
+  let sp, tp;
+  if (srcIsSec && srcInfo.rect) {
+    sp = sectionEdgePoint(srcInfo.rect, tgtCX, tgtCY);
+  } else {
+    sp = allocatePort(edge.source, tgtCX, tgtCY, "out");
+  }
+  if (tgtIsSec && tgtInfo.rect) {
+    tp = sectionEdgePoint(tgtInfo.rect, srcCX, srcCY);
+  } else {
+    tp = allocatePort(edge.target, srcCX, srcCY, "in");
+  }
 
-  // Use curve for cross-panel flows that span multiple sections
-  const srcGroup = sourceNode.group || "";
-  const tgtGroup = targetNode.group || "";
-  const crossPanel =
-    (srcGroup === "bs_assets" || srcGroup === "bs_liabilities") &&
-    (tgtGroup.startsWith("onshore") || tgtGroup.startsWith("offshore") || tgtGroup === "gov_entities");
-
-  if (crossPanel && dy > 600) return true;
-
-  // Default: straight line (matching reference image style)
-  return false;
-}
-
-/** Label position at the middle of the edge path. */
-function labelPos(edge) {
-  const s = nodeMap[edge.source];
-  const t = nodeMap[edge.target];
-  if (!s || !t) return { x: 0, y: 0 };
-
-  const sp = allocatePort(edge.source, t.x, t.y, "out");
-  const tp = allocatePort(edge.target, s.x, s.y, "in");
+  const s = srcIsSec ? { x: sp.x, y: sp.y } : nodeMap[edge.source];
+  const t = tgtIsSec ? { x: tp.x, y: tp.y } : nodeMap[edge.target];
+  if (!s || !t) { edge._labelPos = { x: 0, y: 0 }; return ""; }
 
   const { index, total } = OFFSETS[edge.id] || { index: 0, total: 1 };
-  const offset = (index - (total - 1) / 2) * OFFSET_PX;
+  const step = Math.min(OFFSET_PX, Math.max(4, 60 / total));
+  const offset = (index - (total - 1) / 2) * step;
 
-  const dx = tp.x - sp.x;
-  const dy = tp.y - sp.y;
-  const len = Math.sqrt(dx * dx + dy * dy) || 1;
-  const ox = (-dy / len) * offset;
-  const oy = (dx / len) * offset;
+  const srcFed = !srcIsSec && isFedNode(edge.source);
+  const tgtFed = !tgtIsSec && isFedNode(edge.target);
 
-  // Place label at path midpoint with slight offset for readability
-  const midX = (sp.x + tp.x) / 2 + ox;
-  const midY = (sp.y + tp.y) / 2 + oy - 5;
+  // ── Cross-panel routing (Fed ↔ Market) — keep existing corridor logic ──
+  if (srcFed !== tgtFed) {
+    const finalSp = srcFed
+      ? allocatePort(edge.source, s.x + 2000, s.y, "out")
+      : (srcIsSec ? sp : allocatePort(edge.source, s.x - 2000, s.y, "out"));
+    const finalTp = tgtFed
+      ? allocatePort(edge.target, t.x + 2000, t.y, "in")
+      : (tgtIsSec ? tp : allocatePort(edge.target, t.x - 2000, t.y, "in"));
 
-  return { x: midX, y: midY };
+    const dy = Math.abs(finalTp.y - finalSp.y);
+    if (dy >= 300) {
+      const cx = CORRIDOR_X + offset;
+      edge._labelPos = { x: cx + 10, y: (finalSp.y + finalTp.y) / 2 };
+      return `M ${finalSp.x},${finalSp.y} L ${cx},${finalSp.y} L ${cx},${finalTp.y} L ${finalTp.x},${finalTp.y}`;
+    }
+    edge._labelPos = { x: (finalSp.x + finalTp.x) / 2, y: (finalSp.y + finalTp.y) / 2 + offset - 5 };
+    return `M ${finalSp.x},${finalSp.y + offset} L ${finalTp.x},${finalTp.y + offset}`;
+  }
+
+  // ── Intra-panel routing with obstacle detection ─────────────────────
+  // Apply consistent perpendicular offset for bidirectional edges
+  const [refS, refT] = edge.source < edge.target ? [s, t] : [t, s];
+  const rdx = refT.x - refS.x, rdy = refT.y - refS.y;
+  const rlen = Math.sqrt(rdx * rdx + rdy * rdy) || 1;
+  const ox = (-rdy / rlen) * offset, oy = (rdx / rlen) * offset;
+
+  const startX = sp.x + ox, startY = sp.y + oy;
+  const endX = tp.x + ox, endY = tp.y + oy;
+
+  // Collect node IDs to exclude from collision (source, target, and section anchors)
+  const excludeIds = new Set();
+  if (!srcIsSec) excludeIds.add(edge.source);
+  if (!tgtIsSec) excludeIds.add(edge.target);
+
+  // Check line-of-sight
+  const blocked = isSegmentBlocked(startX, startY, endX, endY, excludeIds);
+
+  if (!blocked) {
+    // Clear line-of-sight → straight line
+    edge._labelPos = { x: (startX + endX) / 2, y: (startY + endY) / 2 - 5 };
+    return `M ${startX},${startY} L ${endX},${endY}`;
+  }
+
+  // ── Polyline routing (max 2 turns) ──────────────────────────────────
+  // Generate candidate routes and pick the first unblocked one.
+  const polyline = findPolylineRoute(startX, startY, endX, endY, excludeIds, offset);
+  const pts = polyline.waypoints;
+  edge._labelPos = polyline.labelPos;
+
+  // Build SVG path from waypoints
+  let d = `M ${pts[0].x},${pts[0].y}`;
+  for (let i = 1; i < pts.length; i++) d += ` L ${pts[i].x},${pts[i].y}`;
+  return d;
+}
+
+/**
+ * Find the best polyline route (max 2 turns) between two points.
+ * Tries L-shapes (1 turn) first, then Z-shapes (2 turns).
+ * Each segment is axis-aligned (horizontal or vertical).
+ */
+function findPolylineRoute(sx, sy, ex, ey, excludeIds, offset) {
+  const dx = ex - sx, dy = ey - sy;
+
+  // ── L-shape candidates (1 turn) ──
+  const lCandidates = [
+    // H then V
+    [{ x: sx, y: sy }, { x: ex, y: sy }, { x: ex, y: ey }],
+    // V then H
+    [{ x: sx, y: sy }, { x: sx, y: ey }, { x: ex, y: ey }],
+  ];
+
+  for (const pts of lCandidates) {
+    if (!isPolylineBlocked(pts, excludeIds)) {
+      return {
+        waypoints: pts,
+        labelPos: { x: pts[1].x, y: pts[1].y - 5 }, // label at corner
+      };
+    }
+  }
+
+  // ── Z-shape candidates (2 turns) ──
+  // Try multiple mid-positions to find a clear path
+  const midFractions = [0.5, 0.33, 0.67, 0.25, 0.75];
+  const zCandidates = [];
+
+  for (const frac of midFractions) {
+    // H-V-H: horizontal first, jog vertically, then horizontal to end
+    const midY = sy + dy * frac;
+    zCandidates.push([
+      { x: sx, y: sy }, { x: sx, y: midY }, { x: ex, y: midY }, { x: ex, y: ey }
+    ]);
+    // V-H-V: vertical first, jog horizontally, then vertical to end
+    const midX = sx + dx * frac;
+    zCandidates.push([
+      { x: sx, y: sy }, { x: midX, y: sy }, { x: midX, y: ey }, { x: ex, y: ey }
+    ]);
+  }
+
+  // Also try routes that jog out sideways to avoid obstacles
+  const sideJogs = [40, -40, 80, -80];
+  for (const jog of sideJogs) {
+    // Horizontal jog
+    const midY = (sy + ey) / 2 + jog;
+    zCandidates.push([
+      { x: sx, y: sy }, { x: sx, y: midY }, { x: ex, y: midY }, { x: ex, y: ey }
+    ]);
+    // Vertical jog
+    const midX = (sx + ex) / 2 + jog;
+    zCandidates.push([
+      { x: sx, y: sy }, { x: midX, y: sy }, { x: midX, y: ey }, { x: ex, y: ey }
+    ]);
+  }
+
+  for (const pts of zCandidates) {
+    if (!isPolylineBlocked(pts, excludeIds)) {
+      // Label at the midpoint of the middle segment
+      const midSeg = Math.floor(pts.length / 2);
+      return {
+        waypoints: pts,
+        labelPos: {
+          x: (pts[midSeg - 1].x + pts[midSeg].x) / 2,
+          y: (pts[midSeg - 1].y + pts[midSeg].y) / 2 - 5,
+        },
+      };
+    }
+  }
+
+  // Fallback: use the first L-shape even though it's blocked
+  const fallback = lCandidates[Math.abs(dx) >= Math.abs(dy) ? 0 : 1];
+  return {
+    waypoints: fallback,
+    labelPos: { x: fallback[1].x, y: fallback[1].y - 5 },
+  };
+}
+
+/** Label position — uses the _labelPos computed by edgePath. */
+function labelPos(edge) {
+  return edge._labelPos || { x: 0, y: 0 };
 }
 
 /** Get resolved hex color for an edge. */
@@ -234,18 +511,22 @@ export function renderEdges(layer, { onEdgeHover, onEdgeOut }) {
   // Reset port allocations before each full re-render
   usedPorts.clear();
 
+  // Pre-compute all edge paths in a single port-allocation pass
+  // (avoids inconsistency from calling edgePath/labelPos multiple times)
+  EDGES.forEach(e => { e._path = edgePath(e); });
+
   const g = layer.selectAll("g.edge")
     .data(EDGES, d => d.id)
     .join("g")
       .attr("class", "edge");
 
-  // Path — orthogonal polyline
+  // Path — straight, orthogonal, or curve
   g.append("path")
-    .attr("d", edgePath)
+    .attr("d", d => d._path)
     .attr("fill", "none")
     .attr("stroke", edgeColor)
     .attr("stroke-width", 1.6)
-    .attr("stroke-linejoin", "miter")
+    .attr("stroke-linejoin", "round")
     .attr("marker-end", d => `url(#arrow-${d.color})`);
 
   // Value label background
@@ -257,10 +538,9 @@ export function renderEdges(layer, { onEdgeHover, onEdgeOut }) {
     .attr("visibility", "hidden");
 
   // Hover target (invisible wider path for easy hovering)
-  // MUST be rendered BEFORE the text label so that text sits on top and receives mouse events
   g.append("path")
     .attr("class", "edge-hover-zone")
-    .attr("d", edgePath)
+    .attr("d", d => d._path)
     .attr("fill", "none")
     .attr("stroke", "transparent")
     .attr("stroke-width", 14)
