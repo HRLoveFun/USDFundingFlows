@@ -374,11 +374,14 @@ function edgePath(edge) {
   if (!srcIsSec) excludeIds.add(edge.source);
   if (!tgtIsSec) excludeIds.add(edge.target);
 
-  // Check line-of-sight
-  const blocked = isSegmentBlocked(startX, startY, endX, endY, excludeIds);
+  // Only allow straight line when axis-aligned (same x ±2 or same y ±2) and ≥5px apart
+  const ALIGN_TOL = 2, MIN_EDGE_LEN = 5;
+  const axisAligned = Math.abs(startX - endX) < ALIGN_TOL || Math.abs(startY - endY) < ALIGN_TOL;
+  const edgeLen = Math.abs(startX - endX) + Math.abs(startY - endY);
 
-  if (!blocked) {
-    // Clear line-of-sight → straight line
+  if (axisAligned && edgeLen >= MIN_EDGE_LEN &&
+      !isSegmentBlocked(startX, startY, endX, endY, excludeIds)) {
+    // Axis-aligned clear line-of-sight → straight line
     edge._labelPos = { x: (startX + endX) / 2, y: (startY + endY) / 2 - 5 };
     return `M ${startX},${startY} L ${endX},${endY}`;
   }
@@ -396,8 +399,81 @@ function edgePath(edge) {
 }
 
 /**
+ * Find safe corridors perpendicular to the main axis of travel.
+ * Scans all collision shapes in the sweep range and finds x (or y) positions
+ * that are clear of any obstacles.
+ * @param {number} sweepMin - min on the sweep axis (e.g. yMin for vertical corridors)
+ * @param {number} sweepMax - max on the sweep axis
+ * @param {'x'|'y'} corridorAxis - which axis we want safe positions for
+ * @param {Set<string>} excludeIds - node IDs to skip
+ * @param {number} margin - extra clearance (px)
+ * @returns {number[]} safe positions on corridorAxis, sorted by distance from midpoint
+ */
+function findSafeCorridors(sweepMin, sweepMax, corridorAxis, excludeIds, margin = 12) {
+  const blocked = [];
+  for (const s of collisionShapes) {
+    if (excludeIds.has(s.id)) continue;
+    let sMin, sMax, bMin, bMax;
+    switch (s.type) {
+      case "rect":
+        if (corridorAxis === 'x') {
+          sMin = s.yMin; sMax = s.yMax; bMin = s.xMin; bMax = s.xMax;
+        } else {
+          sMin = s.xMin; sMax = s.xMax; bMin = s.yMin; bMax = s.yMax;
+        }
+        break;
+      case "polygon": {
+        sMin = Infinity; sMax = -Infinity; bMin = Infinity; bMax = -Infinity;
+        for (const v of s.verts) {
+          const sv = corridorAxis === 'x' ? v.y : v.x;
+          const bv = corridorAxis === 'x' ? v.x : v.y;
+          if (sv < sMin) sMin = sv; if (sv > sMax) sMax = sv;
+          if (bv < bMin) bMin = bv; if (bv > bMax) bMax = bv;
+        }
+        break;
+      }
+      case "ellipse":
+        if (corridorAxis === 'x') {
+          sMin = s.cy - s.ry; sMax = s.cy + s.ry; bMin = s.cx - s.rx; bMax = s.cx + s.rx;
+        } else {
+          sMin = s.cx - s.rx; sMax = s.cx + s.rx; bMin = s.cy - s.ry; bMax = s.cy + s.ry;
+        }
+        break;
+    }
+    if (sMax > sweepMin && sMin < sweepMax) {
+      blocked.push({ min: bMin, max: bMax });
+    }
+  }
+  if (blocked.length === 0) return [];
+
+  // Sort and merge overlapping blocked ranges
+  blocked.sort((a, b) => a.min - b.min);
+  const merged = [{ ...blocked[0] }];
+  for (let i = 1; i < blocked.length; i++) {
+    const last = merged[merged.length - 1];
+    if (blocked[i].min <= last.max + margin) {
+      last.max = Math.max(last.max, blocked[i].max);
+    } else {
+      merged.push({ ...blocked[i] });
+    }
+  }
+
+  // Collect safe positions: outside merged ranges and in gaps
+  const safe = [];
+  safe.push(merged[0].min - margin);
+  safe.push(merged[merged.length - 1].max + margin);
+  for (let i = 0; i < merged.length - 1; i++) {
+    const gap = merged[i + 1].min - merged[i].max;
+    if (gap > margin * 2) {
+      safe.push((merged[i].max + merged[i + 1].min) / 2);
+    }
+  }
+  return safe;
+}
+
+/**
  * Find the best polyline route (max 2 turns) between two points.
- * Tries L-shapes (1 turn) first, then Z-shapes (2 turns).
+ * Tries L-shapes (1 turn) first, then Z-shapes (2 turns), then dynamic corridors.
  * Each segment is axis-aligned (horizontal or vertical).
  */
 function findPolylineRoute(sx, sy, ex, ey, excludeIds, offset) {
@@ -426,27 +502,25 @@ function findPolylineRoute(sx, sy, ex, ey, excludeIds, offset) {
   const zCandidates = [];
 
   for (const frac of midFractions) {
-    // H-V-H: horizontal first, jog vertically, then horizontal to end
+    // H-V-H
     const midY = sy + dy * frac;
     zCandidates.push([
       { x: sx, y: sy }, { x: sx, y: midY }, { x: ex, y: midY }, { x: ex, y: ey }
     ]);
-    // V-H-V: vertical first, jog horizontally, then vertical to end
+    // V-H-V
     const midX = sx + dx * frac;
     zCandidates.push([
       { x: sx, y: sy }, { x: midX, y: sy }, { x: midX, y: ey }, { x: ex, y: ey }
     ]);
   }
 
-  // Also try routes that jog out sideways to avoid obstacles
-  const sideJogs = [40, -40, 80, -80];
+  // Side jogs with extended range
+  const sideJogs = [40, -40, 80, -80, 120, -120, 160, -160];
   for (const jog of sideJogs) {
-    // Horizontal jog
     const midY = (sy + ey) / 2 + jog;
     zCandidates.push([
       { x: sx, y: sy }, { x: sx, y: midY }, { x: ex, y: midY }, { x: ex, y: ey }
     ]);
-    // Vertical jog
     const midX = (sx + ex) / 2 + jog;
     zCandidates.push([
       { x: sx, y: sy }, { x: midX, y: sy }, { x: midX, y: ey }, { x: ex, y: ey }
@@ -455,7 +529,6 @@ function findPolylineRoute(sx, sy, ex, ey, excludeIds, offset) {
 
   for (const pts of zCandidates) {
     if (!isPolylineBlocked(pts, excludeIds)) {
-      // Label at the midpoint of the middle segment
       const midSeg = Math.floor(pts.length / 2);
       return {
         waypoints: pts,
@@ -463,6 +536,38 @@ function findPolylineRoute(sx, sy, ex, ey, excludeIds, offset) {
           x: (pts[midSeg - 1].x + pts[midSeg].x) / 2,
           y: (pts[midSeg - 1].y + pts[midSeg].y) / 2 - 5,
         },
+      };
+    }
+  }
+
+  // ── Dynamic corridor routing ──
+  // Compute safe x-corridors (for vertical travel) and y-corridors (for horizontal)
+
+  // Safe vertical corridors (find clear x positions)
+  const safeX = findSafeCorridors(Math.min(sy, ey), Math.max(sy, ey), 'x', excludeIds);
+  // Sort by distance from midpoint of start/end x
+  const mx = (sx + ex) / 2;
+  safeX.sort((a, b) => Math.abs(a - mx) - Math.abs(b - mx));
+  for (const cx of safeX) {
+    const pts = [{ x: sx, y: sy }, { x: cx, y: sy }, { x: cx, y: ey }, { x: ex, y: ey }];
+    if (!isPolylineBlocked(pts, excludeIds)) {
+      return {
+        waypoints: pts,
+        labelPos: { x: cx + 10, y: (sy + ey) / 2 - 5 },
+      };
+    }
+  }
+
+  // Safe horizontal corridors (find clear y positions)
+  const safeY = findSafeCorridors(Math.min(sx, ex), Math.max(sx, ex), 'y', excludeIds);
+  const my = (sy + ey) / 2;
+  safeY.sort((a, b) => Math.abs(a - my) - Math.abs(b - my));
+  for (const cy of safeY) {
+    const pts = [{ x: sx, y: sy }, { x: sx, y: cy }, { x: ex, y: cy }, { x: ex, y: ey }];
+    if (!isPolylineBlocked(pts, excludeIds)) {
+      return {
+        waypoints: pts,
+        labelPos: { x: (sx + ex) / 2, y: cy - 5 },
       };
     }
   }
