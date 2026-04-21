@@ -166,33 +166,47 @@ export const TRANSACTION_TYPES = Object.entries(EDGE_COLORS).map(([id, cfg]) => 
   dash: "",
 }));
 
+export const EDGE_CONNECTION_TYPES = {
+  SELF: "self",
+  CONNECTED: "connected",
+};
+
+function buildSectionEndpoints(x, y, w, h) {
+  return {
+    top: { x: x + w / 2, y },
+    right: { x: x + w, y: y + h / 2 },
+    bottom: { x: x + w / 2, y: y + h },
+    left: { x, y: y + h / 2 },
+  };
+}
+
 // ── Section / group definitions (rendered as background rectangles) ─────
 // Left-right layout: Federal Reserve (left) || U.S. Dollar Funding Market (right)
 export const SECTIONS = [
   // ── LEFT PANEL: FEDERAL RESERVE ──────────────────────────────────────
-  { id: "fed",         label: "FEDERAL RESERVE",             x: 20,   y: 10,   w: 500,  h: 1220, style: "header" },
-  { id: "bs",          label: "BALANCE SHEET",               x: 35,   y: 55,   w: 470, h: 1175, style: "subheader" },
+  { id: "fed",         label: "FEDERAL RESERVE",             x: 20,   y: 10,   w: 500,  h: 1220, style: "header", level: 1, endpoints: buildSectionEndpoints(20, 10, 500, 1220) },
+  { id: "bs",          label: "BALANCE SHEET",               x: 35,   y: 55,   w: 470, h: 1175, style: "subheader", level: 2, endpoints: buildSectionEndpoints(35, 55, 470, 1175) },
 
   // ── RIGHT PANEL: U.S. DOLLAR FUNDING MARKET ──────────────────────────
-  { id: "market",      label: "U.S. DOLLAR FUNDING MARKET",  x: 540,  y: 10,   w: 1600, h: 1220, style: "header" },
-  { id: "onshore",     label: "ONSHORE ENTITIES",            x: 560,  y: 55,   w: 940,  h: 1175, style: "subheader" },
-  { id: "offshore",    label: "OFFSHORE ENTITIES",           x: 1520, y: 55,   w: 610,  h: 1175, style: "subheader" },
+  { id: "market",      label: "U.S. DOLLAR FUNDING MARKET",  x: 540,  y: 10,   w: 1600, h: 1220, style: "header", level: 1, endpoints: buildSectionEndpoints(540, 10, 1600, 1220) },
+  { id: "onshore",     label: "ONSHORE ENTITIES",            x: 560,  y: 55,   w: 940,  h: 1175, style: "subheader", level: 2, endpoints: buildSectionEndpoints(560, 55, 940, 1175) },
+  { id: "offshore",    label: "OFFSHORE ENTITIES",           x: 1520, y: 55,   w: 610,  h: 1175, style: "subheader", level: 2, endpoints: buildSectionEndpoints(1520, 55, 610, 1175) },
 
   // Onshore sub-groups (matching reference image hierarchy)
-  { id: "banks_dealers",    label: "Banks and Dealers",           x: 575,  y: 95,   w: 905,  h: 300,  style: "group" },
-  { id: "onshore_inv",      label: "Onshore Investors",           x: 575,  y: 420,  w: 905,  h: 520,  style: "group" },
+  { id: "banks_dealers",    label: "Banks and Dealers",           x: 575,  y: 95,   w: 905,  h: 300,  style: "group", level: 3, endpoints: buildSectionEndpoints(575, 95, 905, 300) },
+  { id: "onshore_inv",      label: "Onshore Investors",           x: 575,  y: 420,  w: 905,  h: 520,  style: "group", level: 3, endpoints: buildSectionEndpoints(575, 420, 905, 520) },
   // Dashed boxes inside Onshore area — unified gray color, precisely wrapping contained shapes (+12px padding)
   // Box 1: U.S. Banks(848±110) + U.S. Branches(1208±110) — hexagon rx=110, ry=38
-  { id: "dash_banks_pair",       label: "",  x: 726, y: 147, w: 604, h: 98, style: "dashed_gray" },
+  { id: "dash_banks_pair",       label: "",  x: 726, y: 147, w: 604, h: 98, style: "dashed_gray", level: 4, endpoints: buildSectionEndpoints(726, 147, 604, 98) },
   // Box 2: Gov MMF(878±102) + Prime MMF(1178±102) — circle rx=102, ry=36
-  { id: "dash_mmf_row",          label: "",  x: 754, y: 574, w: 548, h: 112,style: "dashed_gray" },
+  { id: "dash_mmf_row",          label: "",  x: 754, y: 574, w: 548, h: 112,style: "dashed_gray", level: 4, endpoints: buildSectionEndpoints(754, 574, 548, 112) },
   // Box 3: Securities Lenders + Corporates(Row3) + FCBs/SWFs + Hedge Funds(Row4) — circles rx=102, ry=36
-  { id: "dash_investor_group",   label: "",  x: 754, y: 699, w: 548, h: 231,style: "dashed_gray" },
+  { id: "dash_investor_group",   label: "",  x: 754, y: 699, w: 548, h: 231,style: "dashed_gray", level: 4, endpoints: buildSectionEndpoints(754, 699, 548, 231) },
   // Box 4: FHLB(753±110) + GSEs(1028±110) — hexagon rx=110, ry=38
-  { id: "dash_gse_pair",         label: "",  x: 621, y: 1007,w: 539, h: 116,style: "dashed_gray" },
-  { id: "gov_entities",     label: "U.S. Government Entities",    x: 575,  y: 965,  w: 905,  h: 230,  style: "group" },
+  { id: "dash_gse_pair",         label: "",  x: 621, y: 1007,w: 539, h: 116,style: "dashed_gray", level: 4, endpoints: buildSectionEndpoints(621, 1007, 539, 116) },
+  { id: "gov_entities",     label: "U.S. Government Entities",    x: 575,  y: 965,  w: 905,  h: 230,  style: "group", level: 3, endpoints: buildSectionEndpoints(575, 965, 905, 230) },
   // Offshore sub-groups — wraps 3 nodes: Foreign Insurers(y=350), Foreign Banks(y=560), Corporates(y=785)
-  { id: "offshore_investors", label: "",  x: 1698, y: 300, w: 244, h: 535, style: "dashed_gray" },
+  { id: "offshore_investors", label: "",  x: 1698, y: 300, w: 244, h: 535, style: "dashed_gray", level: 3, endpoints: buildSectionEndpoints(1698, 300, 244, 535) },
 ];
 
 // ── Text annotations (column headers, hierarchy labels) ─────────────────
@@ -277,18 +291,16 @@ export const NODES = [
 // ── ~49 Edge definitions (directed flows) ───────────────────────────────
 // color: arrow color key from EDGE_COLORS
 // seriesIds: FRED series to display on this edge
+// connectionType: "self" = loop on one shape, "connected" = line between two shapes
 export const EDGES = [
-  // ── Red: Fed Core Liquidity (bidirectional) ─────────────────────────
-  { id: "red_resbal_usbanks",  source: "bs_reserve_balances", target: "us_banks",    color: "red", seriesIds: ["WRESBAL", "IORB"], label: "Reserve Balances" },
-  { id: "red_usbanks_resbal",  source: "us_banks",    target: "bs_reserve_balances", color: "red", seriesIds: ["WRESBAL"],         label: "Reserve Balances" },
-  { id: "red_tga_ustreas",     source: "bs_tga",      target: "us_treasury",         color: "red", seriesIds: [],                  label: "TGA" },
-  { id: "red_ustreas_tga",     source: "us_treasury", target: "bs_tga",              color: "red", seriesIds: [],                  label: "TGA" },
+  // ── Red | Fed reserve account deposits ────────────────────────────────
+  { id: "red_banksdealers_resbal", source: "sec:banks_dealers", target: "bs_reserve_balances", color: "red", seriesIds: ["WRESBAL"], label: "Reserve Balances" },
+  { id: "red_govent_otherliab",    source: "sec:gov_entities",  target: "bs_other_liab",       color: "red", seriesIds: [],         label: "Other Liabilities" },
 
-  // ── Brown ───────────────────────────────────────────────────────────
-  { id: "brown_usbanks_fhlb",   source: "us_banks",      target: "fhlb",          color: "brown", seriesIds: [],                  label: "" },
-  { id: "brown_fbank_offmmf",   source: "foreign_banks",  target: "offshore_mmf",  color: "brown", seriesIds: [],                  label: "" },
+  // ── Brown | Federal Home Loan Bank advances ───────────────────────────
+  { id: "brown_usbanks_fhlb",   source: "fhlb",      target: "us_banks",          color: "brown", seriesIds: [],                  label: "" },
 
-  // ── Cyan ────────────────────────────────────────────────────────────
+  // ── Cyan | Reverse repurchase agreement facility usage ─────────────────
   { id: "cyan_rrp_govmmf",      source: "bs_rrp",         target: "gov_mmf",               color: "cyan", seriesIds: ["RRPONTTLD"], label: "ON RRP" },
   { id: "cyan_govmmf_rrp",      source: "gov_mmf",        target: "bs_rrp",                color: "cyan", seriesIds: ["RRPONTTLD"], label: "ON RRP" },
   { id: "cyan_frepo_fcboff",    source: "bs_foreign_repo", target: "fcb_swf_supra_offshore", color: "cyan", seriesIds: ["WDFOA"],    label: "Foreign Repo Pool" },
@@ -297,7 +309,7 @@ export const EDGES = [
   { id: "cyan_fhlb_hedge",      source: "fhlb",           target: "hedge_funds",            color: "cyan", seriesIds: [],            label: "" },
   { id: "cyan_fcbon_hedge",     source: "fcb_swf_supra_onshore", target: "hedge_funds",     color: "cyan", seriesIds: [],            label: "" },
 
-  // ── Green: Regular Market Flows ─────────────────────────────────────
+  // ── Green | Commercial paper ───────────────────────────────────────────
   { id: "green_usbanks_usfbo",   source: "us_banks",     target: "us_fbo",                  color: "green", seriesIds: [],           label: "" },
   { id: "green_usfbo_usbanks",   source: "us_fbo",       target: "us_banks",                color: "green", seriesIds: [],           label: "" },
   { id: "green_dealers_usbanks", source: "dealers",       target: "us_banks",                color: "green", seriesIds: [],           label: "" },
@@ -312,7 +324,7 @@ export const EDGES = [
   { id: "green_corpoff_fbank",   source: "corporates_offshore", target: "foreign_banks",      color: "green", seriesIds: [],           label: "" },
   { id: "green_offmmf_corpoff",  source: "offshore_mmf",   target: "corporates_offshore",     color: "green", seriesIds: [],           label: "" },
 
-  // ── Black: Interbank / Cross-border ─────────────────────────────────
+  // ── Black | U.S. dollar repo investments ───────────────────────────────
   { id: "black_usbanks_usfbo",   source: "us_banks",     target: "us_fbo",                  color: "black", seriesIds: [],           label: "" },
   { id: "black_usfbo_usbanks",   source: "us_fbo",       target: "us_banks",                color: "black", seriesIds: [],           label: "" },
   { id: "black_usbanks_dealers", source: "us_banks",      target: "dealers",                 color: "black", seriesIds: [],           label: "" },
@@ -324,7 +336,7 @@ export const EDGES = [
   { id: "black_fbank_usfbo",     source: "foreign_banks",  target: "us_fbo",                 color: "black", seriesIds: [],           label: "" },
   { id: "black_fbank_dealers",   source: "foreign_banks",  target: "dealers",                 color: "black", seriesIds: [],           label: "" },
 
-  // ── Purple: Cross-border / Government ───────────────────────────────
+  // ── Purple | Foreign exchange swaps: U.S dollar swaps for foreign currency ─
   { id: "purple_usbanks_usfbo",  source: "us_banks",     target: "us_fbo",                  color: "purple", seriesIds: [],          label: "" },
   { id: "purple_usfbo_usbanks",  source: "us_fbo",       target: "us_banks",                color: "purple", seriesIds: [],          label: "" },
   { id: "purple_gse_ustreas",    source: "gse",          target: "us_treasury",              color: "purple", seriesIds: [],          label: "" },
@@ -334,36 +346,32 @@ export const EDGES = [
   { id: "purple_ustreas_fcboff", source: "us_treasury",   target: "fcb_swf_supra_offshore",   color: "purple", seriesIds: [],          label: "" },
   { id: "purple_fcboff_corpoff", source: "fcb_swf_supra_offshore", target: "corporates_offshore", color: "purple", seriesIds: [],     label: "" },
 
-  // ── Gold (U.S. dollar deposits) ─────────────────────────────────────────
+  // ── Gold | U.S. dollar deposits (including certificates of deposit, overnight and time deposits)
   { id: "gold_dealers_usfbo",     source: "dealers",       target: "us_fbo",                 color: "gold",   seriesIds: [],          label: "" },
   { id: "gold_finins_corpoff",    source: "foreign_insurers", target: "corporates_offshore",  color: "gold",   seriesIds: [],          label: "" },
   { id: "gold_offmmf_fbank",      source: "offshore_mmf",   target: "foreign_banks",          color: "gold",   seriesIds: [],          label: "" },
   { id: "gold_fcboff_usfbo",      source: "fcb_swf_supra_offshore", target: "us_fbo",         color: "gold",   seriesIds: [],          label: "" },
 
-  // ── Pink ────────────────────────────────────────────────────────────
+  // ── Pink | Eurodollar lending ───────────────────────────────────────────
   { id: "pink_fbank_primemmf",    source: "foreign_banks",  target: "prime_mmf",              color: "pink", seriesIds: [],            label: "" },
 
-  // ── Magenta: Securities purchases (from market regions to U.S. Gov Entities) ──
+  // ── Magenta | Securities purchases from Treasury and government-sponsored enterprises
   // Source = section/dashed-box ID (connects from region edge), Target = node or region
   { id: "magenta_banksdealers_govent",   source: "sec:banks_dealers",    target: "sec:gov_entities", color: "magenta", seriesIds: [], label: "" },
   { id: "magenta_onshoreinv_govent",     source: "sec:onshore_inv",      target: "sec:gov_entities", color: "magenta", seriesIds: [], label: "" },
   { id: "magenta_offshore_govent",       source: "sec:offshore",         target: "sec:gov_entities", color: "magenta", seriesIds: [], label: "" },
   { id: "magenta_dashedgse_ustreas",     source: "sec:dash_gse_pair",    target: "us_treasury",      color: "magenta", seriesIds: [], label: "" },
 
-  // ── Fed balance sheet asset outflows ───────────────────────────────
-  { id: "red_primarycred_usbanks",source: "bs_primary_credit", target: "us_banks",             color: "red",    seriesIds: [],          label: "Primary Credit" },
+  // ── Purple | Foreign exchange swaps (balance sheet outflows) ────────────
   { id: "purple_cbswaps_fcboff",  source: "bs_cb_swaps",     target: "fcb_swf_supra_offshore", color: "purple", seriesIds: ["SWPT"],    label: "CB Swaps" },
 
-  // ── Fed balance sheet liability links ─────────────────────────────
-  { id: "red_fhlbdep_fhlb",       source: "bs_fhlb_deposits", target: "fhlb",                  color: "red",    seriesIds: [],          label: "" },
-  { id: "red_resbal_usfbo",       source: "bs_reserve_balances", target: "us_fbo",             color: "red",    seriesIds: [],          label: "" },
-
-  // ── Light green: Fed funds lending ────────────────────────────────
+  // ── Light green | Fed funds lending ────────────────────────────────────
   { id: "light_green_fhlb_usbanks", source: "fhlb",          target: "us_banks",               color: "light_green", seriesIds: [],     label: "" },
 
-  // ── Brown: FHLB advances (reverse direction) ─────────────────────
-  { id: "brown_fhlb_usbanks",     source: "fhlb",            target: "us_banks",               color: "brown", seriesIds: [],           label: "" },
-];
+].map(edge => ({
+  connectionType: EDGE_CONNECTION_TYPES.CONNECTED,
+  ...edge,
+}));
 
 // ── Glossary ────────────────────────────────────────────────────────────
 export const GLOSSARY = [

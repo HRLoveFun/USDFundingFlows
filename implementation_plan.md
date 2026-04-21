@@ -480,6 +480,29 @@ TimeSelector.init(dates, callback) → Sidebar.init(types, glossary, callback)
 
 ## 关键技术要点
 
+连线几何重构接口设计见 `edge_routing_interface_design.md`，用于后续把端点选择、路由搜索、冲突消解拆成独立模块。
+
+### 连线类型与端点选择
+- 自连：从图形甲到图形甲的弧线。
+- 相连：从图形甲到图形乙的直线或折线。
+  - 直线：中间没有穿过其他图形或区域。
+  - 折线：连线端点的直线会穿过其他图形或区域，通过算法生成折线路径。
+- 当前 `EDGES` 数据先统一标记为 `connected`，为后续新增 `self` 类型保留入口。
+
+```javascript
+function computeEdgePath(edge) {
+  if (edge.connectionType === "self" || edge.source === edge.target) {
+    const { start, end } = selectSelfLoopEndpoints(edge.source);
+    return buildSelfLoopArc(start, end);
+  }
+
+  const { start, end } = selectConnectedEndpoints(edge.source, edge.target);
+  return lineOfSightClear(start, end)
+    ? buildStraightPath(start, end)
+    : buildPolylinePath(start, end);
+}
+```
+
 ### 多边平行路径偏移
 同一节点对有多条边（如 FHLB→US Banks 有 FHLB advances 和 Fed funds），需垂直偏移：
 ```javascript

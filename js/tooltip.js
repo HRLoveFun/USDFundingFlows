@@ -63,14 +63,6 @@ export function showNodeTooltip(node, event, values, metadata, formatValue) {
 
   let html = `<strong>${node.label.replace(/\n/g, " ")}</strong>`;
 
-  if (metadata && values) {
-    for (const [sid, meta] of Object.entries(metadata)) {
-      if (meta.node_ids?.includes(node.id) && values[sid] != null) {
-        html += `<br>${meta.name}: <b>${formatValue(values[sid], meta.units)}</b>`;
-      }
-    }
-  }
-
   updateTooltip(html, event);
 }
 
@@ -81,13 +73,6 @@ export function showEdgeTooltip(edge, event, values, metadata, formatValue) {
   const ec = EDGE_COLORS[edge.color];
   let html = `<strong>${edge.label || edge.id}</strong>`;
   html += `<br><em style="color:${ec?.color ?? '#999'}">${ec?.name ?? edge.color}</em>`;
-
-  for (const sid of edge.seriesIds) {
-    const v   = values?.[sid];
-    const m   = metadata?.[sid];
-    const fmt = v != null ? formatValue(v, m?.units) : "N/A";
-    html += `<br>${m?.name ?? sid}: <b>${fmt}</b>`;
-  }
 
   updateTooltip(html, event);
 }

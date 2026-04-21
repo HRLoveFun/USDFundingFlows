@@ -359,10 +359,5 @@ export function updateNodeBadges(nodeGroup, values, formatValue) {
   };
 
   nodeGroup.select(".node-badge")
-    .text(d => {
-      const cfg = badgeMap[d.id];
-      if (!cfg || !cfg.sid) return "";
-      const v = values?.[cfg.sid];
-      return v != null ? formatValue(v, cfg.units) : "";
-    });
+    .text("");
 }
