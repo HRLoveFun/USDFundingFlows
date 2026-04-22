@@ -233,3 +233,13 @@ g.node.dimmed circle.port-marker {
 .dimmed {
   opacity: 0.12 !important;
 }
+
+/* Transaction-type highlight: bold border on connected nodes */
+g.node.highlighted .node-shape {
+  stroke-width: 2.5px;
+}
+
+/* Transaction-type highlight: bold border on connected sections / dashed boxes */
+g.section.highlighted > rect {
+  stroke-width: 2.5px;
+}

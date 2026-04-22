@@ -3,7 +3,8 @@
  * Loads time_series.json, series_metadata.json, available_dates.json.
  */
 
-const FETCH_TIMEOUT = 15000; // 15s timeout
+import { TIMING } from "./config.js";
+const { FETCH_TIMEOUT } = TIMING;
 
 class DataLoader {
   constructor() {
@@ -16,7 +17,7 @@ class DataLoader {
     // Show loading indicator without destroying the container content
     const overlay = Object.assign(document.createElement("div"), {
       id: "loading-overlay",
-      style: "position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;font-size:16px;color:#666;background:rgba(255,255,255,0.85);z-index:10;",
+      style: "position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;font-size:22px;color:#666;background:rgba(255,255,255,0.85);z-index:10;",
       textContent: "Loading FRED data\u2026",
     });
     const container = document.getElementById("diagram-container");
@@ -41,13 +42,13 @@ class DataLoader {
       this.dates      = dates;
     } catch (err) {
       overlay.style.color = "#c00";
-      overlay.style.fontSize = "14px";
+      overlay.style.fontSize = "20px";
       overlay.innerHTML = `Failed to load data:<br><code>${err.message}</code>`;
       console.error("DataLoader.load failed:", err);
       // Don't throw — allow partial init so other features may still work
     } finally {
       // Remove loading overlay after a short delay so initial render has time to paint
-      setTimeout(() => overlay.remove(), 100);
+      setTimeout(() => overlay.remove(), TIMING.LOADING_OVERLAY_DELAY_MS);
     }
   }
 

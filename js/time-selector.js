@@ -3,6 +3,10 @@
  * Triggers callback on change with the selected quarter-end date string.
  */
 
+import { TIMING } from "./config.js";
+
+const { SLIDER_DEBOUNCE_MS } = TIMING;
+
 export function initTimeSelector(container, dates, onChange) {
   const wrapper = document.createElement("div");
   wrapper.className = "time-selector";
@@ -48,7 +52,7 @@ export function initTimeSelector(container, dates, onChange) {
     select.value = date;
     // Debounce: coalesce rapid slider events
     clearTimeout(sliderTimer);
-    sliderTimer = setTimeout(() => onChange(date), 50);
+    sliderTimer = setTimeout(() => onChange(date), SLIDER_DEBOUNCE_MS);
   });
 
   container.appendChild(wrapper);

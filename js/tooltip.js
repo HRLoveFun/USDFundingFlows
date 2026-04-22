@@ -8,6 +8,7 @@
  *   3. isSelecting() guard — suppresses show while user has active text selection
  */
 import { EDGE_COLORS } from "./constants.js";
+import { TIMING } from "./config.js";
 
 let tooltipEl;
 let rafId = null;
@@ -19,7 +20,7 @@ let _hasSelection = false;
 let _hideTimer = null;
 
 // Grace period: if hide is called but user is selecting, wait this long
-const HIDE_GRACE_MS = 200;
+const { HIDE_GRACE_MS } = TIMING;
 
 /**
  * Check if any text is currently selected on the page.

@@ -5,12 +5,7 @@
  *  3. Searchable Glossary
  */
 import { EDGE_COLORS, SHAPE_COLORS, GLOSSARY } from "./constants.js";
-
-const SHAPE_LABELS = {
-  hexagon:   "Intermediary institutions (Hexagon)",
-  circle:    "Investor Institutions (Circle)",
-  rectangle: "Government (Rectangle)",
-};
+import { SHAPE_LABELS } from "./config.js";
 
 export function initSidebar(container, { onTypeSelect }) {
   container.innerHTML = "";

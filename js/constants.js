@@ -1,44 +1,32 @@
 /**
- * constants.js — Core configuration for the U.S. Dollar Funding Flows diagram.
- * Left-right layout: Federal Reserve (left) || U.S. Dollar Funding Market (right).
- * 28 entity nodes, ~65 edges, 8 arrow color types.
+ * constants.js — Data definitions for the U.S. Dollar Funding Flows diagram.
+ * Layout constants are centralized in config.js and re-exported here for
+ * backward compatibility.
  */
 
-// ── Viewbox dimensions ──────────────────────────────────────────────────
-export const WIDTH = 2150;
-export const HEIGHT = 1280;
+import {
+  CANVAS,
+  GRID,
+  SHAPE_TYPES,
+  SHAPE_COLORS,
+  SHAPE_SIZES,
+  CATEGORY_COLORS,
+  EDGE_COLORS,
+  EDGE_CONNECTION_TYPES,
+  NODE_TEXT,
+} from "./config.js";
 
-// ── Shape types ─────────────────────────────────────────────────────────
-export const SHAPE = {
-  HEXAGON:   "hexagon",    // Banks & Dealers
-  CIRCLE:    "circle",     // Investors, funds, corporates, insurers
-  RECTANGLE: "rectangle",  // U.S. Treasury
-  BS_PARENT: "bs_parent",  // Balance sheet group item (parent)
-  BS_CHILD:  "bs_child",   // Balance sheet sub-group item (child)
-};
-
-// ── Shape fill colors ───────────────────────────────────────────────────
-export const SHAPE_COLORS = {
-  hexagon:   "#5C6BC0",  // indigo (intermediary institutions)
-  circle:    "#26A69A",  // teal (investor institutions)
-  rectangle: "#607D8B",  // blue-gray (government)
-};
-
-// ── Shape sizing ────────────────────────────────────────────────────────
-export const SHAPE_SIZES = {
-  hexagon:   { rx: 110, ry: 38 },
-  circle:    { rx: 102, ry: 36 },
-  rectangle: { width: 155, height: 58 },
-  bs_parent: { width: 190, height: 28 },
-  bs_child:  { width: 175, height: 26 },
-};
+// Re-export layout constants so existing imports continue to work
+export const WIDTH = CANVAS.WIDTH;
+export const HEIGHT = CANVAS.HEIGHT;
+export { GRID, SHAPE_COLORS, SHAPE_SIZES, CATEGORY_COLORS, EDGE_COLORS, EDGE_CONNECTION_TYPES };
+export const SHAPE = SHAPE_TYPES;
 
 // ── Grid-based connection ports per shape type ───────────────────────────
 // Each port is an {x, y} offset from the shape center, computed as the
 // intersection of the shape boundary with a 10px grid. This yields many
 // more candidate ports than the old hand-picked list, enabling the edge
 // router to find shorter, overlap-free connections.
-const GRID = 10;  // grid resolution in SVG px
 
 /** Deduplicate ports within ±1px to avoid near-duplicates from rounding. */
 function dedupPorts(pts) {
@@ -135,29 +123,6 @@ export const SHAPE_PORTS = {
   bs_child:  rectGridPorts(SHAPE_SIZES.bs_child.width, SHAPE_SIZES.bs_child.height),
 };
 
-// ── Node category colors (for sidebar legend) ───────────────────────────
-export const CATEGORY_COLORS = {
-  hexagon:   "#5C6BC0",
-  circle:    "#26A69A",
-  rectangle: "#607D8B",
-  bs_parent: "#E3F2FD",
-  bs_child:  "#FFF8E1",
-};
-
-// ── Arrow / edge color definitions ──────────────────────────────────────
-export const EDGE_COLORS = {
-  green:       { color: "#4CAF50", name: "Commercial paper" },
-  pink:        { color: "#E91E63", name: "Eurodollar lending" },
-  brown:       { color: "#795548", name: "Federal Home Loan Bank advances" },
-  light_green: { color: "#8BC34A", name: "Fed funds lending" },
-  red:         { color: "#E53935", name: "Fed reserve account deposits" },
-  purple:      { color: "#9C27B0", name: "Foreign exchange swaps: U.S dollar swaps for foreign currency" },
-  cyan:        { color: "#00BCD4", name: "Reverse repurchase agreement facility usage" },
-  magenta:     { color: "#E040FB", name: "Securities purchases from Treasury and government-sponsored enterprises" },
-  gold:        { color: "#FFB300", name: "U.S. dollar deposits (including certificates of deposit, overnight and time deposits)" },
-  black:       { color: "#424242", name: "U.S. dollar repo investments" },
-};
-
 // ── Transaction Types (mapped from EDGE_COLORS for sidebar/tooltip compat) ─
 export const TRANSACTION_TYPES = Object.entries(EDGE_COLORS).map(([id, cfg]) => ({
   id,
@@ -165,11 +130,6 @@ export const TRANSACTION_TYPES = Object.entries(EDGE_COLORS).map(([id, cfg]) => 
   color: cfg.color,
   dash: "",
 }));
-
-export const EDGE_CONNECTION_TYPES = {
-  SELF: "self",
-  CONNECTED: "connected",
-};
 
 function buildSectionEndpoints(x, y, w, h) {
   return {
@@ -188,9 +148,9 @@ export const SECTIONS = [
   { id: "bs",          label: "BALANCE SHEET",               x: 35,   y: 55,   w: 470, h: 1175, style: "subheader", level: 2, endpoints: buildSectionEndpoints(35, 55, 470, 1175) },
 
   // ── RIGHT PANEL: U.S. DOLLAR FUNDING MARKET ──────────────────────────
-  { id: "market",      label: "U.S. DOLLAR FUNDING MARKET",  x: 540,  y: 10,   w: 1600, h: 1220, style: "header", level: 1, endpoints: buildSectionEndpoints(540, 10, 1600, 1220) },
+  { id: "market",      label: "U.S. DOLLAR FUNDING MARKET",  x: 540,  y: 10,   w: 1420, h: 1220, style: "header", level: 1, endpoints: buildSectionEndpoints(540, 10, 1420, 1220) },
   { id: "onshore",     label: "ONSHORE ENTITIES",            x: 560,  y: 55,   w: 940,  h: 1175, style: "subheader", level: 2, endpoints: buildSectionEndpoints(560, 55, 940, 1175) },
-  { id: "offshore",    label: "OFFSHORE ENTITIES",           x: 1520, y: 55,   w: 610,  h: 1175, style: "subheader", level: 2, endpoints: buildSectionEndpoints(1520, 55, 610, 1175) },
+  { id: "offshore",    label: "OFFSHORE ENTITIES",           x: 1550, y: 55,   w: 260,  h: 1175, style: "subheader", level: 2, endpoints: buildSectionEndpoints(1550, 55, 260, 1175) },
 
   // Onshore sub-groups (matching reference image hierarchy)
   { id: "banks_dealers",    label: "Banks and Dealers",           x: 575,  y: 95,   w: 905,  h: 300,  style: "group", level: 3, endpoints: buildSectionEndpoints(575, 95, 905, 300) },
@@ -206,7 +166,7 @@ export const SECTIONS = [
   { id: "dash_gse_pair",         label: "",  x: 621, y: 1007,w: 539, h: 116,style: "dashed_gray", level: 4, endpoints: buildSectionEndpoints(621, 1007, 539, 116) },
   { id: "gov_entities",     label: "U.S. Government Entities",    x: 575,  y: 965,  w: 905,  h: 230,  style: "group", level: 3, endpoints: buildSectionEndpoints(575, 965, 905, 230) },
   // Offshore sub-groups — wraps 3 nodes: Foreign Insurers(y=350), Foreign Banks(y=560), Corporates(y=785)
-  { id: "offshore_investors", label: "",  x: 1698, y: 300, w: 244, h: 535, style: "dashed_gray", level: 3, endpoints: buildSectionEndpoints(1698, 300, 244, 535) },
+  { id: "offshore_investors", label: "",  x: 1560, y: 300, w: 240, h: 535, style: "dashed_gray", level: 3, endpoints: buildSectionEndpoints(1560, 300, 240, 535) },
 ];
 
 // ── Text annotations (column headers, hierarchy labels) ─────────────────
@@ -225,26 +185,24 @@ export const NODES = [
   // ════════════════════════════════════════════════════════════════════
 
   // ── Balance Sheet — Assets (资产端, 左列) ────────────────────────────
-  { id: "bs_treasuries",      label: "U.S. Treasury Securities",                        x: 125,  y: 118,  shape: "bs_parent", group: "bs_assets" },
-  { id: "bs_agency_mbs",      label: "Agency Debt and MBS Securities",                   x: 125,  y: 165,  shape: "bs_parent", group: "bs_assets" },
-  { id: "bs_primary_credit",  label: "Primary Credit Facility",                          x: 125,  y: 212,  shape: "bs_parent", group: "bs_assets" },
-  { id: "bs_cb_swaps",        label: "Central Bank U.S. Dollar Liquidity Swaps",         x: 125,  y: 259,  shape: "bs_parent", group: "bs_assets" },
-  { id: "bs_foreign_reserves",label: "Foreign Reserves",                                 x: 125,  y: 306,  shape: "bs_parent", group: "bs_assets" },
-  { id: "bs_others_assets",   label: "Others",                                           x: 125,  y: 353,  shape: "bs_parent", group: "bs_assets" },
+  { id: "bs_treasuries",      label: "U.S. Treasury Securities",                        x: 125,  y: 220,  shape: "bs_parent", group: "bs_assets" },
+  { id: "bs_agency_mbs",      label: "Agency Debt and MBS Securities",                   x: 125,  y: 290,  shape: "bs_parent", group: "bs_assets" },
+  { id: "bs_primary_credit",  label: "Primary Credit Facility",                          x: 125,  y: 360,  shape: "bs_parent", group: "bs_assets" },
+  { id: "bs_cb_swaps",        label: "Central Bank U.S. Dollar Liquidity Swaps",         x: 125,  y: 430,  shape: "bs_parent", group: "bs_assets" },
+  { id: "bs_foreign_reserves",label: "Foreign Reserves",                                 x: 125,  y: 500,  shape: "bs_parent", group: "bs_assets" },
+  { id: "bs_others_assets",   label: "Others",                                           x: 125,  y: 570,  shape: "bs_parent", group: "bs_assets" },
 
   // ── Balance Sheet — Liabilities (负债端, 右列) ───────────────────────
-  { id: "bs_reserve_balances", label: "Reserve Balances (from depository institutions)",  x: 355,  y: 118,  shape: "bs_parent", group: "bs_liabilities" },
-  { id: "bs_fed_notes",        label: "Federal Reserve Notes (currency in circulation)",  x: 355,  y: 165,  shape: "bs_parent", group: "bs_liabilities" },
-  // RRP — group parent item
-  { id: "bs_rrp",              label: "Reverse Repurchase Agreements",                    x: 355,  y: 212,  shape: "bs_parent", group: "bs_liabilities" },
-  // RRP — sub-group children (indented, parentId links to parent)
-  { id: "bs_rrp_omo",          label: "Open market operations",                           x: 372,  y: 256,  shape: "bs_child",  group: "bs_liabilities", parentId: "bs_rrp" },
-  { id: "bs_foreign_repo",     label: "Foreign repo pool",                                 x: 372,  y: 298,  shape: "bs_child",  group: "bs_liabilities", parentId: "bs_rrp" },
-  // Other Liabilities — group parent item
-  { id: "bs_other_liab",       label: "Other Liabilities",                                x: 355,  y: 345,  shape: "bs_parent", group: "bs_liabilities" },
-  // Deposits — sub-group children (indented, parentId links to parent)
-  { id: "bs_tga",             label: "U.S. Treasury General Account (TGA)",             x: 372,  y: 391,  shape: "bs_child",  group: "bs_liabilities", parentId: "bs_other_liab" },
-  { id: "bs_fhlb_deposits",    label: "FHLB, DFMU, and other deposits",                   x: 372,  y: 433,  shape: "bs_child",  group: "bs_liabilities", parentId: "bs_other_liab" },
+  { id: "bs_reserve_balances", label: "Reserve Balances (from depository institutions)",  x: 355,  y: 220,  shape: "bs_parent", group: "bs_liabilities" },
+  { id: "bs_fed_notes",        label: "Federal Reserve Notes (currency in circulation)",  x: 355,  y: 290,  shape: "bs_parent", group: "bs_liabilities" },
+  // RRP — group parent + children
+  { id: "bs_rrp",              label: "Reverse Repurchase Agreements",                    x: 355,  y: 360,  shape: "bs_parent", group: "bs_liabilities" },
+  { id: "bs_rrp_omo",          label: "Open market operations",                           x: 372,  y: 425,  shape: "bs_child",  group: "bs_liabilities", parentId: "bs_rrp" },
+  { id: "bs_foreign_repo",     label: "Foreign repo pool",                                 x: 372,  y: 485,  shape: "bs_child",  group: "bs_liabilities", parentId: "bs_rrp" },
+  // Other Liabilities — group parent + children
+  { id: "bs_other_liab",       label: "Other Liabilities",                                x: 355,  y: 430,  shape: "bs_parent", group: "bs_liabilities" },
+  { id: "bs_tga",             label: "U.S. Treasury General Account (TGA)",             x: 372,  y: 495,  shape: "bs_child",  group: "bs_liabilities", parentId: "bs_other_liab" },
+  { id: "bs_fhlb_deposits",    label: "FHLB, DFMU, and other deposits",                   x: 372,  y: 555,  shape: "bs_child",  group: "bs_liabilities", parentId: "bs_other_liab" },
 
   // ════════════════════════════════════════════════════════════════════
   // RIGHT PANEL — U.S. DOLLAR FUNDING MARKET
@@ -279,13 +237,13 @@ export const NODES = [
   // ── Offshore Entities (far right single column) ──
   // Reference: vertical stack matching the rightmost column in image
   { id: "fcb_swf_supra_offshore", label: "Foreign Central Banks (FCBs),\nSovereign Wealth Funds (SWFs),\nand Supranational Organizations (supras)",
-                                                                                       x: 1820, y: 150,  shape: "circle",   group: "offshore" },
+                                                                                       x: 1680, y: 150,  shape: "circle",   group: "offshore" },
   { id: "foreign_insurers",       label: "Foreign Insurers &\nOther Money Managers",
-                                                                                       x: 1820, y: 350,  shape: "circle",   group: "offshore" },
+                                                                                       x: 1680, y: 350,  shape: "circle",   group: "offshore" },
   { id: "foreign_banks",          label: "Foreign Banks &\nForeign Branches\nof U.S. Banks",
-                                                                                       x: 1820, y: 560,  shape: "hexagon", group: "offshore" },
-  { id: "corporates_offshore",    label: "Corporates",                    x: 1820, y: 785,  shape: "circle",   group: "offshore" },
-  { id: "offshore_mmf",           label: "Offshore Money\nMarket Funds", x: 1820, y: 1010, shape: "circle",   group: "offshore" },
+                                                                                       x: 1680, y: 560,  shape: "hexagon", group: "offshore" },
+  { id: "corporates_offshore",    label: "Corporates",                    x: 1680, y: 785,  shape: "circle",   group: "offshore" },
+  { id: "offshore_mmf",           label: "Offshore Money\nMarket Funds", x: 1680, y: 1010, shape: "circle",   group: "offshore" },
 ];
 
 // ── ~49 Edge definitions (directed flows) ───────────────────────────────
@@ -294,66 +252,64 @@ export const NODES = [
 // connectionType: "self" = loop on one shape, "connected" = line between two shapes
 export const EDGES = [
   // ── Red | Fed reserve account deposits ────────────────────────────────
-  { id: "red_banksdealers_resbal", source: "sec:banks_dealers", target: "bs_reserve_balances", color: "red", seriesIds: ["WRESBAL"], label: "Reserve Balances" },
+  { id: "red_banksdealers_resbal", source: "sec:dash_banks_pair", target: "bs_reserve_balances", color: "red", seriesIds: ["WRESBAL"], label: "Reserve Balances" },
   { id: "red_govent_otherliab",    source: "sec:gov_entities",  target: "bs_other_liab",       color: "red", seriesIds: [],         label: "Other Liabilities" },
 
   // ── Brown | Federal Home Loan Bank advances ───────────────────────────
   { id: "brown_usbanks_fhlb",   source: "fhlb",      target: "us_banks",          color: "brown", seriesIds: [],                  label: "" },
 
   // ── Cyan | Reverse repurchase agreement facility usage ─────────────────
-  { id: "cyan_rrp_govmmf",      source: "bs_rrp",         target: "gov_mmf",               color: "cyan", seriesIds: ["RRPONTTLD"], label: "ON RRP" },
-  { id: "cyan_govmmf_rrp",      source: "gov_mmf",        target: "bs_rrp",                color: "cyan", seriesIds: ["RRPONTTLD"], label: "ON RRP" },
-  { id: "cyan_frepo_fcboff",    source: "bs_foreign_repo", target: "fcb_swf_supra_offshore", color: "cyan", seriesIds: ["WDFOA"],    label: "Foreign Repo Pool" },
-  { id: "cyan_fcboff_frepo",    source: "fcb_swf_supra_offshore", target: "bs_foreign_repo", color: "cyan", seriesIds: ["WDFOA"],    label: "Foreign Repo Pool" },
-  { id: "cyan_fhlb_govmmf",     source: "fhlb",           target: "gov_mmf",               color: "cyan", seriesIds: ["EFFR"],      label: "" },
-  { id: "cyan_fhlb_hedge",      source: "fhlb",           target: "hedge_funds",            color: "cyan", seriesIds: [],            label: "" },
-  { id: "cyan_fcbon_hedge",     source: "fcb_swf_supra_onshore", target: "hedge_funds",     color: "cyan", seriesIds: [],            label: "" },
+  { id: "cyan_banksdealers_rrp",  source: "sec:banks_dealers",     target: "bs_rrp", color: "cyan", seriesIds: [], label: "" },
+  { id: "cyan_dashmmf_rrp",       source: "sec:dash_mmf_row",      target: "bs_rrp", color: "cyan", seriesIds: [], label: "" },
+  { id: "cyan_fcbonswfsupra_rrp", source: "fcb_swf_supra_onshore", target: "bs_foreign_repo", color: "cyan", seriesIds: [], label: "" },
+  { id: "cyan_dashgse_rrp",       source: "sec:dash_gse_pair",     target: "bs_rrp_omo",      color: "cyan", seriesIds: [], label: "" },
 
   // ── Green | Commercial paper ───────────────────────────────────────────
-  { id: "green_usbanks_usfbo",   source: "us_banks",     target: "us_fbo",                  color: "green", seriesIds: [],           label: "" },
-  { id: "green_usfbo_usbanks",   source: "us_fbo",       target: "us_banks",                color: "green", seriesIds: [],           label: "" },
-  { id: "green_dealers_usbanks", source: "dealers",       target: "us_banks",                color: "green", seriesIds: [],           label: "" },
   { id: "green_primemmf_corp",   source: "prime_mmf",     target: "corporates_onshore",      color: "green", seriesIds: ["COMPAPER"], label: "" },
   { id: "green_seclend_corp",    source: "securities_lenders", target: "corporates_onshore",  color: "green", seriesIds: [],           label: "" },
   { id: "green_fcbon_corp",      source: "fcb_swf_supra_onshore", target: "corporates_onshore", color: "green", seriesIds: [],        label: "" },
-  { id: "green_corp_hedge",      source: "corporates_onshore", target: "hedge_funds",         color: "green", seriesIds: [],           label: "" },
-  { id: "green_fcboff_finins",   source: "fcb_swf_supra_offshore", target: "foreign_insurers", color: "green", seriesIds: [],          label: "" },
+  { id: "green_hedge_corp",      source: "hedge_funds", target: "corporates_onshore",         color: "green", seriesIds: [],           label: "" },
   { id: "green_fcboff_fbank",    source: "fcb_swf_supra_offshore", target: "foreign_banks",    color: "green", seriesIds: [],          label: "" },
-  { id: "green_finins_fbank",    source: "foreign_insurers", target: "foreign_banks",         color: "green", seriesIds: [],           label: "" },
-  { id: "green_fbank_corpoff",   source: "foreign_banks",  target: "corporates_offshore",     color: "green", seriesIds: [],           label: "" },
+  { id: "green_offmmf_fbank",    source: "offshore_mmf", target: "foreign_banks",         color: "green", seriesIds: [],           label: "" },
+  { id: "green_fbank_finin",   source: "foreign_banks",  target: "foreign_insurers",     color: "green", seriesIds: [],           label: "" },
   { id: "green_corpoff_fbank",   source: "corporates_offshore", target: "foreign_banks",      color: "green", seriesIds: [],           label: "" },
   { id: "green_offmmf_corpoff",  source: "offshore_mmf",   target: "corporates_offshore",     color: "green", seriesIds: [],           label: "" },
+  // Onshore / Offshore section -> dashed box wrapping U.S. Banks pair
+  { id: "green_onshoreinv_banks", source: "sec:onshore_inv", target: "sec:dash_banks_pair", color: "green", seriesIds: [], label: "" },
+  { id: "green_offshore_banks",   source: "sec:offshore",    target: "sec:dash_banks_pair", color: "green", seriesIds: [], label: "" },
 
   // ── Black | U.S. dollar repo investments ───────────────────────────────
-  { id: "black_usbanks_usfbo",   source: "us_banks",     target: "us_fbo",                  color: "black", seriesIds: [],           label: "" },
-  { id: "black_usfbo_usbanks",   source: "us_fbo",       target: "us_banks",                color: "black", seriesIds: [],           label: "" },
-  { id: "black_usbanks_dealers", source: "us_banks",      target: "dealers",                 color: "black", seriesIds: [],           label: "" },
-  { id: "black_usfbo_dealers",   source: "us_fbo",        target: "dealers",                 color: "black", seriesIds: [],           label: "" },
-  { id: "black_hedge_dealers",   source: "hedge_funds",    target: "dealers",                 color: "black", seriesIds: [],           label: "" },
-  { id: "black_usfbo_fcboff",    source: "us_fbo",        target: "fcb_swf_supra_offshore",  color: "black", seriesIds: [],           label: "" },
-  { id: "black_fcboff_usfbo",    source: "fcb_swf_supra_offshore", target: "us_fbo",         color: "black", seriesIds: [],           label: "" },
-  { id: "black_usfbo_fbank",     source: "us_fbo",        target: "foreign_banks",           color: "black", seriesIds: [],           label: "" },
-  { id: "black_fbank_usfbo",     source: "foreign_banks",  target: "us_fbo",                 color: "black", seriesIds: [],           label: "" },
-  { id: "black_fbank_dealers",   source: "foreign_banks",  target: "dealers",                 color: "black", seriesIds: [],           label: "" },
+  { id: "black_usbanks_dealers", source: "us_banks",      target: "dealers",                 color: "black", seriesIds: [],           label: "", connectionType: EDGE_CONNECTION_TYPES.BIDIRECTIONAL },
+  { id: "black_usfbo_dealers",   source: "us_fbo",        target: "dealers",                 color: "black", seriesIds: [],           label: "", connectionType: EDGE_CONNECTION_TYPES.BIDIRECTIONAL },
+  { id: "black_dealers_hedge",   source: "dealers",    target: "hedge_funds",                 color: "black", seriesIds: [],           label: "" },
+  { id: "black_dashgse_banksdealers", source: "sec:dash_gse_pair", target: "sec:banks_dealers", color: "black", seriesIds: [], label: "" },
+  { id: "black_offshore_banksdealers", source: "sec:offshore", target: "sec:banks_dealers", color: "black", seriesIds: [], label: "" },
+  { id: "black_onshoreinv_banksdealers", source: "sec:onshore_inv", target: "sec:banks_dealers", color: "black", seriesIds: [], label: "" },
 
   // ── Purple | Foreign exchange swaps: U.S dollar swaps for foreign currency ─
-  { id: "purple_usbanks_usfbo",  source: "us_banks",     target: "us_fbo",                  color: "purple", seriesIds: [],          label: "" },
-  { id: "purple_usfbo_usbanks",  source: "us_fbo",       target: "us_banks",                color: "purple", seriesIds: [],          label: "" },
-  { id: "purple_gse_ustreas",    source: "gse",          target: "us_treasury",              color: "purple", seriesIds: [],          label: "" },
-  { id: "purple_fcboff_fcbon",   source: "fcb_swf_supra_offshore", target: "fcb_swf_supra_onshore", color: "purple", seriesIds: [],  label: "" },
-  { id: "purple_hedge_fbank",    source: "hedge_funds",   target: "foreign_banks",            color: "purple", seriesIds: [],          label: "" },
-  { id: "purple_fbank_hedge",    source: "foreign_banks",  target: "hedge_funds",             color: "purple", seriesIds: [],          label: "" },
-  { id: "purple_ustreas_fcboff", source: "us_treasury",   target: "fcb_swf_supra_offshore",   color: "purple", seriesIds: [],          label: "" },
-  { id: "purple_fcboff_corpoff", source: "fcb_swf_supra_offshore", target: "corporates_offshore", color: "purple", seriesIds: [],     label: "" },
+  { id: "purple_usbanks_usfbo",  source: "us_banks",     target: "us_fbo",                  color: "purple", seriesIds: [],          label: "", connectionType: EDGE_CONNECTION_TYPES.BIDIRECTIONAL },
+  { id: "purple_hedge_offshoreinv",  source: "hedge_funds",            target: "sec:offshore_investors", color: "purple", seriesIds: [], label: "" },
+  { id: "purple_dashbanks_offshoreinv", source: "sec:dash_banks_pair", target: "sec:offshore_investors", color: "purple", seriesIds: [], label: "" },
+  { id: "purple_fcboff_offshoreinv", source: "fcb_swf_supra_offshore", target: "sec:offshore_investors", color: "purple", seriesIds: [], label: "" },
+  { id: "purple_fbank_corpoff",    source: "foreign_banks",          target: "corporates_offshore",    color: "purple", seriesIds: [], label: "" },
+  { id: "purple_fbank_finins",     source: "foreign_banks",          target: "foreign_insurers",       color: "purple", seriesIds: [], label: "" },
+
 
   // ── Gold | U.S. dollar deposits (including certificates of deposit, overnight and time deposits)
-  { id: "gold_dealers_usfbo",     source: "dealers",       target: "us_fbo",                 color: "gold",   seriesIds: [],          label: "" },
-  { id: "gold_finins_corpoff",    source: "foreign_insurers", target: "corporates_offshore",  color: "gold",   seriesIds: [],          label: "" },
-  { id: "gold_offmmf_fbank",      source: "offshore_mmf",   target: "foreign_banks",          color: "gold",   seriesIds: [],          label: "" },
-  { id: "gold_fcboff_usfbo",      source: "fcb_swf_supra_offshore", target: "us_fbo",         color: "gold",   seriesIds: [],          label: "" },
+  { id: "gold_offshore_dashbanks",    source: "sec:offshore",           target: "sec:dash_banks_pair", color: "gold", seriesIds: [], label: "" },
+  { id: "gold_onshoreinv_dashbanks",  source: "sec:onshore_inv",        target: "sec:dash_banks_pair", color: "gold", seriesIds: [], label: "" },
+  { id: "gold_offmmf_fbank",          source: "offshore_mmf",           target: "foreign_banks",       color: "gold", seriesIds: [], label: "" },
+  { id: "gold_finins_fbank",          source: "foreign_insurers",       target: "foreign_banks",       color: "gold", seriesIds: [], label: "" },
+  { id: "gold_corpoff_fbank",         source: "corporates_offshore",    target: "foreign_banks",       color: "gold", seriesIds: [], label: "" },
+  { id: "gold_fcboff_fbank",          source: "fcb_swf_supra_offshore", target: "foreign_banks",       color: "gold", seriesIds: [], label: "" },
 
   // ── Pink | Eurodollar lending ───────────────────────────────────────────
-  { id: "pink_fbank_primemmf",    source: "foreign_banks",  target: "prime_mmf",              color: "pink", seriesIds: [],            label: "" },
+  { id: "pink_primemmf_fbank",    source: "prime_mmf",  target: "foreign_banks",              color: "pink", seriesIds: [],            label: "" },
+  { id: "pink_fcboff_fbank",      source: "fcb_swf_supra_offshore", target: "foreign_banks",    color: "pink", seriesIds: [],            label: "" },
+  { id: "pink_finins_fbank",      source: "foreign_insurers",       target: "foreign_banks",    color: "pink", seriesIds: [],            label: "" },
+  { id: "pink_corpoff_fbank",     source: "corporates_offshore",    target: "foreign_banks",    color: "pink", seriesIds: [],            label: "" },
+  { id: "pink_offmmf_fbank",      source: "offshore_mmf",           target: "foreign_banks",    color: "pink", seriesIds: [],            label: "" },
+  { id: "pink_dashinv_fbank",     source: "sec:dash_investor_group", target: "foreign_banks",   color: "pink", seriesIds: [],            label: "" },
 
   // ── Magenta | Securities purchases from Treasury and government-sponsored enterprises
   // Source = section/dashed-box ID (connects from region edge), Target = node or region
@@ -362,11 +318,12 @@ export const EDGES = [
   { id: "magenta_offshore_govent",       source: "sec:offshore",         target: "sec:gov_entities", color: "magenta", seriesIds: [], label: "" },
   { id: "magenta_dashedgse_ustreas",     source: "sec:dash_gse_pair",    target: "us_treasury",      color: "magenta", seriesIds: [], label: "" },
 
-  // ── Purple | Foreign exchange swaps (balance sheet outflows) ────────────
-  { id: "purple_cbswaps_fcboff",  source: "bs_cb_swaps",     target: "fcb_swf_supra_offshore", color: "purple", seriesIds: ["SWPT"],    label: "CB Swaps" },
 
   // ── Light green | Fed funds lending ────────────────────────────────────
-  { id: "light_green_fhlb_usbanks", source: "fhlb",          target: "us_banks",               color: "light_green", seriesIds: [],     label: "" },
+  { id: "light_green_dashgse_dashbanks", source: "sec:dash_gse_pair", target: "sec:dash_banks_pair", color: "light_green", seriesIds: [], label: "" },
+  { id: "light_green_usbanks_self", source: "us_banks", target: "us_banks", color: "light_green", seriesIds: [], label: "" },
+  { id: "light_green_usfbo_self", source: "us_fbo", target: "us_fbo", color: "light_green", seriesIds: [], label: "" },
+  { id: "light_green_usbanks_usfbo", source: "us_banks", target: "us_fbo", color: "light_green", seriesIds: [], label: "", connectionType: EDGE_CONNECTION_TYPES.BIDIRECTIONAL },
 
 ].map(edge => ({
   connectionType: EDGE_CONNECTION_TYPES.CONNECTED,
@@ -390,3 +347,172 @@ export const GLOSSARY = [
   { term: "SWF",              definition: "Sovereign wealth fund." },
   { term: "TGA",              definition: "Treasury General Account — the U.S. government's operating account at the Federal Reserve." },
 ];
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Dynamic node-size computation (run once at module load)
+// Rules:
+// 1. Default size is preserved if text fits.
+// 2. If text exceeds default, expand width up to a computed maxWidth.
+// 3. Max width respects the tightest containing section boundaries and
+//    same-row neighbors (so shapes don't overlap horizontally).
+// 4. Once max width is reached, wrap text and expand height instead.
+// 5. For circles/hexagons, rx expands up to max; then ry expands for height.
+// ═══════════════════════════════════════════════════════════════════════════
+
+const MARGIN = 10;
+const BS_MARGIN = 12;
+
+function estimateTextWidth(text, fontSize) {
+  const avgCharWidth = fontSize * 0.58;
+  return text.length * avgCharWidth;
+}
+
+function autoWrapForSize(label, fontSize, maxWidth) {
+  const cw = NODE_TEXT.CHAR_WIDTH_MAP[fontSize] || fontSize * 0.58;
+  const maxChars = Math.floor(maxWidth / cw);
+  if (label.length <= maxChars) return [label];
+  const words = label.split(" ");
+  const lines = [];
+  let current = "";
+  for (const w of words) {
+    const trial = current ? `${current} ${w}` : w;
+    if (trial.length <= maxChars) {
+      current = trial;
+    } else {
+      if (current) lines.push(current);
+      current = w.length > maxChars ? w.slice(0, maxChars) : w;
+    }
+  }
+  if (current) lines.push(current);
+  return lines.length ? lines : [label];
+}
+
+/** Find the smallest section that spatially contains this node. */
+function findContainingSection(node, sections) {
+  const containing = sections.filter(s =>
+    node.x >= s.x && node.x <= s.x + s.w &&
+    node.y >= s.y && node.y <= s.y + s.h
+  );
+  if (!containing.length) return null;
+  return containing.sort((a, b) => (a.w * a.h) - (b.w * b.h))[0];
+}
+
+/** Compute max allowable width for a node based on section bounds and same-row neighbors. */
+function computeNodeMaxWidth(node, allNodes, sections) {
+  const section = findContainingSection(node, sections);
+  if (!section) return Infinity;
+
+  const sectionPadding = 6;
+  let maxHalfWidth = Math.min(
+    node.x - (section.x + sectionPadding),
+    (section.x + section.w - sectionPadding) - node.x
+  );
+
+  // Constrain by same-row neighbors (within 35 px vertically)
+  const yTolerance = 35;
+  const sameRow = allNodes.filter(n =>
+    n.id !== node.id && Math.abs(n.y - node.y) <= yTolerance
+  );
+  for (const neighbor of sameRow) {
+    const distance = Math.abs(neighbor.x - node.x);
+    maxHalfWidth = Math.min(maxHalfWidth, distance / 2);
+  }
+
+  return Math.max(maxHalfWidth * 2, 60);
+}
+
+/** Compute minimum ry so every text line fits inside an ellipse/hexagon at its y position. */
+function computeRequiredRy(rx, lines, lineHeight, margin, fontSize) {
+  const halfTextHeight = (lines.length * lineHeight) / 2;
+  let requiredRy = 0;
+  lines.forEach((line, i) => {
+    const yCenter = -halfTextHeight + i * lineHeight + lineHeight / 2;
+    const textW = estimateTextWidth(line, fontSize);
+    const neededW = textW + margin;
+    if (neededW >= 2 * rx) {
+      requiredRy = Math.max(requiredRy, Math.abs(yCenter) + lineHeight);
+    } else {
+      const ratio = neededW / (2 * rx);
+      const minRy = Math.abs(yCenter) / Math.sqrt(1 - ratio * ratio);
+      requiredRy = Math.max(requiredRy, minRy);
+    }
+  });
+  return Math.ceil(requiredRy);
+}
+
+NODES.forEach(node => {
+  const sz = SHAPE_SIZES[node.shape];
+  const isBs = node.shape === "bs_parent" || node.shape === "bs_child";
+  const isBsChild = node.shape === "bs_child";
+  const fontSize = isBs ? (isBsChild ? 14 : 15) : 16;
+
+  const maxWidth = computeNodeMaxWidth(node, NODES, SECTIONS);
+
+  let lines = node.label.split("\n");
+  let maxLineWidth = Math.max(...lines.map(l => estimateTextWidth(l, fontSize)));
+
+  const newSize = { ...sz };
+  let changed = false;
+
+  if (node.shape === "rectangle" || isBs) {
+    const margin = isBs ? BS_MARGIN : MARGIN;
+    const defaultThreshold = sz.width - margin * 2;
+
+    if (maxLineWidth > defaultThreshold) {
+      const requiredWidth = Math.round(maxLineWidth + margin * 2);
+      const newWidth = Math.max(sz.width, Math.min(requiredWidth, maxWidth));
+      if (newWidth > sz.width) {
+        newSize.width = newWidth;
+        changed = true;
+      }
+      const availableWidth = newWidth - margin * 2;
+      if (maxLineWidth > availableWidth) {
+        lines = autoWrapForSize(node.label, fontSize, availableWidth);
+      }
+    }
+
+    const lineHeight = isBsChild ? 10 : (isBs ? 11 : 13);
+    const targetHeight = Math.max(sz.height, 14 + (lines.length - 1) * lineHeight);
+    if (targetHeight > sz.height) {
+      newSize.height = targetHeight;
+      changed = true;
+    }
+
+    if (changed) {
+      node._size = newSize;
+      node._lines = lines;
+    }
+  } else if (node.shape === "hexagon" || node.shape === "circle") {
+    const margin = MARGIN;
+    const defaultThreshold = sz.rx * 2 - margin * 2;
+
+    if (maxLineWidth > defaultThreshold) {
+      const requiredRx = Math.round((maxLineWidth + margin * 2) / 2);
+      const maxRx = Math.floor(maxWidth / 2);
+      const newRx = Math.max(sz.rx, Math.min(requiredRx, maxRx));
+      if (newRx > sz.rx) {
+        newSize.rx = newRx;
+        changed = true;
+      }
+      const availableWidth = newRx * 2 - margin * 2;
+      if (maxLineWidth > availableWidth) {
+        lines = autoWrapForSize(node.label, fontSize, availableWidth);
+      }
+    }
+
+    const lineHeight = 13;
+    const targetRy = Math.max(
+      sz.ry,
+      computeRequiredRy(newSize.rx, lines, lineHeight, margin, fontSize)
+    );
+    if (targetRy > sz.ry) {
+      newSize.ry = targetRy;
+      changed = true;
+    }
+
+    if (changed) {
+      node._size = newSize;
+      node._lines = lines;
+    }
+  }
+});

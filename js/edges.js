@@ -5,10 +5,26 @@
  * guaranteeing that each connection point is used by at most one edge.
  */
 import { EDGES, NODES, EDGE_COLORS, EDGE_CONNECTION_TYPES, SHAPE_SIZES, SECTIONS } from "./constants.js";
+import { ROUTING, EDGE_STYLE } from "./config.js";
 import { isSelecting } from "./tooltip.js";
 
-const FED_PANEL_RIGHT = 520;
-const CORRIDOR_X = 530;
+const { FED_PANEL_RIGHT, CORRIDOR_X, MIN_GAP, DASH_OVERLAP_MIN, OFFSET_PX: ROUTING_OFFSET_PX, PAD } = ROUTING;
+const { STROKE_WIDTH: EDGE_STROKE_WIDTH, EMPTY_VALUE_STROKE_WIDTH, HOVER_WIDTH } = EDGE_STYLE;
+
+// Global allocation state (reset each render)
+const allocatedNodePorts = new Map();       // endpointId -> [{x,y}]
+const usedCorridors = new Map();            // 'x'|'y' -> number[]
+const routedSegments = [];                  // previously routed axis-aligned segments
+
+const DASHED_SECTIONS = SECTIONS.filter(s => s.style === 'dashed' || s.style === 'dashed_gray');
+const ROUTE_SECTION_STYLES = new Set(["subheader", "group", "dashed", "dashed_gray"]);
+const SECTION_CORNER_INSET = 24;
+const ROUTE_SECTION_INSET = 10;
+const TURN_PENALTY = 90;
+const EXTRA_TURN_PENALTY = 180;
+const SIGNIFICANT_OVERLAP_MIN = 28;
+const OVERLAP_PENALTY_PER_PX = 12;
+const FOREIGN_REGION_PENALTY = 900;
 
 /**
  * Resolve an endpoint (node-id or "sec:sectionId") to its {x, y} center
@@ -205,7 +221,7 @@ function nodeEndpointCandidates(nodeId) {
   const node = nodeMap[nodeId];
   if (!node) return [];
 
-  const sz = SHAPE_SIZES[node.shape];
+  const sz = node._size || SHAPE_SIZES[node.shape];
   let points;
   if (node.shape === "hexagon") {
     points = hexBoundaryPoints(node.x, node.y, sz.rx, sz.ry);
@@ -235,8 +251,32 @@ function sectionEndpointCandidates(rect) {
   }
 
   const deduped = dedupPoints(points);
-  sectionEndpointCache.set(key, deduped);
-  return deduped;
+  const filtered = deduped.filter(point => !isNearSectionCorner(point, rect));
+  const candidates = filtered.length > 0 ? filtered : deduped;
+  sectionEndpointCache.set(key, candidates);
+  return candidates;
+}
+
+function isNearSectionCorner(point, rect) {
+  const left = rect.x;
+  const right = rect.x + rect.w;
+  const top = rect.y;
+  const bottom = rect.y + rect.h;
+
+  const onTop = Math.abs(point.y - top) < 1;
+  const onBottom = Math.abs(point.y - bottom) < 1;
+  const onLeft = Math.abs(point.x - left) < 1;
+  const onRight = Math.abs(point.x - right) < 1;
+
+  if ((onTop || onBottom) && (point.x <= left + SECTION_CORNER_INSET || point.x >= right - SECTION_CORNER_INSET)) {
+    return true;
+  }
+
+  if ((onLeft || onRight) && (point.y <= top + SECTION_CORNER_INSET || point.y >= bottom - SECTION_CORNER_INSET)) {
+    return true;
+  }
+
+  return false;
 }
 
 function endpointCandidates(id, info) {
@@ -266,6 +306,55 @@ function pointsToPath(points) {
   return d;
 }
 
+function polylineSegments(points) {
+  const pts = normalizeWaypoints(points);
+  const segments = [];
+  for (let i = 0; i < pts.length - 1; i++) {
+    const start = pts[i];
+    const end = pts[i + 1];
+    const horizontal = Math.abs(start.y - end.y) < 0.1;
+    const vertical = Math.abs(start.x - end.x) < 0.1;
+    if (!horizontal && !vertical) continue;
+    segments.push({
+      x1: start.x,
+      y1: start.y,
+      x2: end.x,
+      y2: end.y,
+      horizontal,
+      vertical,
+    });
+  }
+  return segments;
+}
+
+function segmentSharedLength(a, b) {
+  if (a.horizontal && b.horizontal && Math.abs(a.y1 - b.y1) < 0.1) {
+    return Math.max(0, Math.min(Math.max(a.x1, a.x2), Math.max(b.x1, b.x2)) - Math.max(Math.min(a.x1, a.x2), Math.min(b.x1, b.x2)));
+  }
+  if (a.vertical && b.vertical && Math.abs(a.x1 - b.x1) < 0.1) {
+    return Math.max(0, Math.min(Math.max(a.y1, a.y2), Math.max(b.y1, b.y2)) - Math.max(Math.min(a.y1, a.y2), Math.min(b.y1, b.y2)));
+  }
+  return 0;
+}
+
+function routedOverlapPenalty(points) {
+  let penalty = 0;
+  for (const segment of polylineSegments(points)) {
+    for (const existing of routedSegments) {
+      const sharedLength = segmentSharedLength(segment, existing);
+      if (sharedLength <= SIGNIFICANT_OVERLAP_MIN) continue;
+      penalty += (sharedLength - SIGNIFICANT_OVERLAP_MIN) * OVERLAP_PENALTY_PER_PX;
+    }
+  }
+  return penalty;
+}
+
+function rememberRoutedSegments(edgeId, points) {
+  for (const segment of polylineSegments(points)) {
+    routedSegments.push({ ...segment, edgeId });
+  }
+}
+
 function polylineLength(points) {
   let total = 0;
   for (let i = 0; i < points.length - 1; i++) {
@@ -289,10 +378,67 @@ function polylineTurnCount(points) {
   return turns;
 }
 
+function buildRouteContext(options) {
+  const {
+    sourceInfo,
+    targetInfo,
+    sourceOwner = null,
+    targetOwner = null,
+    crossPanel = false,
+  } = options;
+
+  const allowedSectionIds = new Set();
+  if (!crossPanel) {
+    for (const info of [sourceInfo, targetInfo]) {
+      if (!info) continue;
+      if (info.isSection && info.rect) allowedSectionIds.add(info.rect.id);
+      for (const section of routingSections) {
+        if (pointInShape(info.x, info.y, section.shape)) allowedSectionIds.add(section.id);
+      }
+    }
+  }
+
+  return {
+    crossPanel,
+    allowedSectionIds,
+    ownerOptions: { startOwner: sourceOwner, endOwner: targetOwner },
+  };
+}
+
+function foreignRegionPenalty(points, routeContext = {}) {
+  if (routeContext.crossPanel) return 0;
+
+  const allowedSectionIds = routeContext.allowedSectionIds ?? new Set();
+  const seen = new Set();
+  let penalty = 0;
+
+  for (const segment of polylineSegments(points)) {
+    for (const section of routingSections) {
+      if (allowedSectionIds.has(section.id)) continue;
+      if (!segmentIntersectsShape(segment.x1, segment.y1, segment.x2, segment.y2, section.shape)) continue;
+      const key = `${section.id}:${segment.x1},${segment.y1},${segment.x2},${segment.y2}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      penalty += FOREIGN_REGION_PENALTY;
+    }
+  }
+
+  return penalty;
+}
+
+function routePenalty(points, routeContext = {}) {
+  const normalized = normalizeWaypoints(points);
+  const turns = polylineTurnCount(normalized);
+  return turns * TURN_PENALTY
+    + Math.max(0, turns - 1) * EXTRA_TURN_PENALTY
+    + routedOverlapPenalty(normalized)
+    + foreignRegionPenalty(normalized, routeContext);
+}
+
 function pointDirectionPenalty(point, ownerInfo, targetInfo, crossPanel) {
   const dx = targetInfo.x - ownerInfo.x;
   const dy = targetInfo.y - ownerInfo.y;
-  const penalty = crossPanel ? 180 : 80;
+  const penalty = crossPanel ? 180 : 300;
 
   if (crossPanel || Math.abs(dx) >= Math.abs(dy)) {
     if (dx >= 0 && point.x < ownerInfo.x - 1) return penalty;
@@ -305,14 +451,24 @@ function pointDirectionPenalty(point, ownerInfo, targetInfo, crossPanel) {
   return 0;
 }
 
-function pathCandidateCost(points, excludeIds, blockedPenalty) {
+function pathCandidateCost(points, excludeIds, blockedPenalty, routeContext = {}) {
   const normalized = normalizeWaypoints(points);
   return polylineLength(normalized)
-    + polylineTurnCount(normalized) * 40
-    + (isPolylineBlocked(normalized, excludeIds) ? blockedPenalty : 0);
+    + routePenalty(normalized, routeContext)
+    + (isPolylineBlocked(normalized, excludeIds, routeContext.ownerOptions ?? {}) ? blockedPenalty : 0);
 }
 
-function estimateEndpointPairCost(start, end, excludeIds, crossPanel) {
+function estimateEndpointPairCost(start, end, options) {
+  const {
+    excludeIds,
+    crossPanel,
+    sourceInfo,
+    targetInfo,
+    sourceOwner = null,
+    targetOwner = null,
+  } = options;
+  const routeContext = buildRouteContext({ sourceInfo, targetInfo, crossPanel, sourceOwner, targetOwner });
+  const ownerOptions = routeContext.ownerOptions;
   const aligned = Math.abs(start.x - end.x) < 2 || Math.abs(start.y - end.y) < 2;
 
   if (crossPanel) {
@@ -321,12 +477,12 @@ function estimateEndpointPairCost(start, end, excludeIds, crossPanel) {
       { x: CORRIDOR_X, y: start.y },
       { x: CORRIDOR_X, y: end.y },
       end,
-    ], excludeIds, 2400);
+    ], excludeIds, 2400, routeContext);
   }
 
   let best = Infinity;
-  if (aligned && !isSegmentBlocked(start.x, start.y, end.x, end.y, excludeIds)) {
-    best = Math.min(best, Math.abs(start.x - end.x) + Math.abs(start.y - end.y) - 120);
+  if (aligned && !isPolylineBlocked([start, end], excludeIds, ownerOptions)) {
+    best = Math.min(best, Math.abs(start.x - end.x) + Math.abs(start.y - end.y) - 120 + routePenalty([start, end], routeContext));
   }
 
   const lCandidates = [
@@ -334,14 +490,14 @@ function estimateEndpointPairCost(start, end, excludeIds, crossPanel) {
     [start, { x: start.x, y: end.y }, end],
   ];
   for (const points of lCandidates) {
-    if (!isPolylineBlocked(points, excludeIds)) {
-      best = Math.min(best, polylineLength(points) + polylineTurnCount(points) * 40);
+    if (!isPolylineBlocked(points, excludeIds, ownerOptions)) {
+      best = Math.min(best, polylineLength(points) + routePenalty(points, routeContext));
     }
   }
 
   if (!Number.isFinite(best)) {
-    const fallback = findPolylineRoute(start.x, start.y, end.x, end.y, excludeIds, 0);
-    best = pathCandidateCost(fallback.waypoints, excludeIds, 3200) + 120;
+    const fallback = findPolylineRoute(start.x, start.y, end.x, end.y, excludeIds, 0, routeContext);
+    best = pathCandidateCost(fallback.waypoints, excludeIds, 3200, routeContext) + 120;
   }
 
   return best;
@@ -351,22 +507,55 @@ function trimCandidatePool(candidates, targetInfo, limit = 32) {
   if (candidates.length <= limit) return candidates;
   return [...candidates]
     .sort((a, b) => {
-      const da = Math.abs(a.x - targetInfo.x) + Math.abs(a.y - targetInfo.y);
-      const db = Math.abs(b.x - targetInfo.x) + Math.abs(b.y - targetInfo.y);
+      const da = Math.min(Math.abs(a.x - targetInfo.x), Math.abs(a.y - targetInfo.y));
+      const db = Math.min(Math.abs(b.x - targetInfo.x), Math.abs(b.y - targetInfo.y));
       return da - db;
     })
     .slice(0, limit);
 }
 
+function allocationPenalty(point, allocated) {
+  if (!allocated || allocated.length === 0) return 0;
+
+  let minDistSq = Infinity;
+  for (const used of allocated) {
+    const distSq = (point.x - used.x) ** 2 + (point.y - used.y) ** 2;
+    if (distSq < minDistSq) minDistSq = distSq;
+  }
+
+  if (minDistSq >= MIN_GAP * MIN_GAP) return 0;
+
+  const minDist = Math.sqrt(minDistSq);
+  return 120 + (MIN_GAP - minDist) * 2;
+}
+
 function selectBestEndpointPair(sourceCandidates, targetCandidates, options) {
-  const { sourceInfo, targetInfo, excludeIds, crossPanel } = options;
+  const {
+    sourceInfo,
+    targetInfo,
+    excludeIds,
+    crossPanel,
+    sourceOwner = null,
+    targetOwner = null,
+    sourceAllocated = [],
+    targetAllocated = [],
+  } = options;
   const sourcePool = trimCandidatePool(sourceCandidates, targetInfo);
   const targetPool = trimCandidatePool(targetCandidates, sourceInfo);
 
   let best = null;
   for (const start of sourcePool) {
     for (const end of targetPool) {
-      const cost = estimateEndpointPairCost(start, end, excludeIds, crossPanel)
+      const cost = estimateEndpointPairCost(start, end, {
+        excludeIds,
+        crossPanel,
+        sourceInfo,
+        targetInfo,
+        sourceOwner,
+        targetOwner,
+      })
+        + allocationPenalty(start, sourceAllocated)
+        + allocationPenalty(end, targetAllocated)
         + pointDirectionPenalty(start, sourceInfo, targetInfo, crossPanel)
         + pointDirectionPenalty(end, targetInfo, sourceInfo, crossPanel);
       if (!best || cost < best.cost) best = { start, end, cost };
@@ -397,31 +586,85 @@ function isFedAnchor(info) {
 // Phase 2: Collision geometry & line-of-sight testing
 // ══════════════════════════════════════════════════════════════════════════
 
-const PAD = 4; // padding around shapes for collision detection
+// PAD is imported from config.js via ROUTING.PAD
+
+const OWNER_TOUCH_STEP = 6;
+
+function buildHexVertices(cx, cy, rx, ry) {
+  const verts = [];
+  for (let i = 0; i < 6; i++) {
+    const a = (Math.PI / 3) * i;
+    verts.push({ x: cx + rx * Math.cos(a), y: cy + ry * Math.sin(a) });
+  }
+  return verts;
+}
+
+function buildNodeShape(node, padding = 0) {
+  const sz = node._size || SHAPE_SIZES[node.shape];
+  if (node.shape === "hexagon") {
+    return {
+      id: node.id,
+      type: "polygon",
+      verts: buildHexVertices(node.x, node.y, sz.rx + padding, sz.ry + padding),
+    };
+  }
+  if (node.shape === "circle") {
+    return {
+      id: node.id,
+      type: "ellipse",
+      cx: node.x,
+      cy: node.y,
+      rx: sz.rx + padding,
+      ry: sz.ry + padding,
+    };
+  }
+
+  return {
+    id: node.id,
+    type: "rect",
+    xMin: node.x - sz.width / 2 - padding,
+    yMin: node.y - sz.height / 2 - padding,
+    xMax: node.x + sz.width / 2 + padding,
+    yMax: node.y + sz.height / 2 + padding,
+  };
+}
+
+function buildSectionShape(rect) {
+  if (!rect) return null;
+  return {
+    id: rect.id,
+    type: "rect",
+    xMin: rect.x,
+    yMin: rect.y,
+    xMax: rect.x + rect.w,
+    yMax: rect.y + rect.h,
+  };
+}
+
+function buildInsetSectionShape(section) {
+  const inset = Math.min(ROUTE_SECTION_INSET, section.w / 4, section.h / 4);
+  return {
+    id: section.id,
+    type: "rect",
+    xMin: section.x + inset,
+    yMin: section.y + inset,
+    xMax: section.x + section.w - inset,
+    yMax: section.y + section.h - inset,
+  };
+}
+
+const ownerShapes = new Map(NODES.map(node => [node.id, buildNodeShape(node)]));
+const routingSections = SECTIONS
+  .filter(section => ROUTE_SECTION_STYLES.has(section.style))
+  .map(section => ({ id: section.id, style: section.style, shape: buildInsetSectionShape(section) }));
+
+function ownerShapeForEndpoint(endpointId, endpointInfo) {
+  if (endpointInfo.isSection && endpointInfo.rect) return buildSectionShape(endpointInfo.rect);
+  return ownerShapes.get(endpointId) ?? null;
+}
 
 /** Pre-compute collision primitives for all nodes. */
-const collisionShapes = NODES.map(n => {
-  const sz = SHAPE_SIZES[n.shape];
-  if (n.shape === "hexagon") {
-    const rx = sz.rx + PAD, ry = sz.ry + PAD;
-    const verts = [];
-    for (let i = 0; i < 6; i++) {
-      const a = (Math.PI / 3) * i;
-      verts.push({ x: n.x + rx * Math.cos(a), y: n.y + ry * Math.sin(a) });
-    }
-    return { id: n.id, type: "polygon", verts };
-  }
-  if (n.shape === "circle") {
-    return { id: n.id, type: "ellipse", cx: n.x, cy: n.y, rx: sz.rx + PAD, ry: sz.ry + PAD };
-  }
-  // Rectangle shapes: rectangle, bs_parent, bs_child
-  const w = sz.width, h = sz.height;
-  return {
-    id: n.id, type: "rect",
-    xMin: n.x - w / 2 - PAD, yMin: n.y - h / 2 - PAD,
-    xMax: n.x + w / 2 + PAD, yMax: n.y + h / 2 + PAD,
-  };
-});
+const collisionShapes = NODES.map(node => buildNodeShape(node, PAD));
 
 /** Segment (x1,y1)→(x2,y2) vs AABB test. */
 function segIntersectsRect(x1, y1, x2, y2, r) {
@@ -484,6 +727,70 @@ function pointInConvex(px, py, verts) {
   return true;
 }
 
+function pointInShape(x, y, shape) {
+  switch (shape.type) {
+    case "rect":
+      return x >= shape.xMin - 1e-6 && x <= shape.xMax + 1e-6
+        && y >= shape.yMin - 1e-6 && y <= shape.yMax + 1e-6;
+    case "polygon":
+      return pointInConvex(x, y, shape.verts);
+    case "ellipse": {
+      const u = (x - shape.cx) / shape.rx;
+      const v = (y - shape.cy) / shape.ry;
+      return u * u + v * v <= 1 + 1e-6;
+    }
+    default:
+      return false;
+  }
+}
+
+function segmentIntersectsShape(x1, y1, x2, y2, shape) {
+  switch (shape.type) {
+    case "rect":
+      return segIntersectsRect(x1, y1, x2, y2, shape);
+    case "polygon":
+      return segIntersectsPolygon(x1, y1, x2, y2, shape.verts);
+    case "ellipse":
+      return segIntersectsEllipse(x1, y1, x2, y2, shape);
+    default:
+      return false;
+  }
+}
+
+function segmentViolatesOwner(x1, y1, x2, y2, ownerShape, options = {}) {
+  if (!ownerShape) return false;
+
+  const { allowStartTouch = false, allowEndTouch = false } = options;
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const length = Math.hypot(dx, dy);
+  if (length < 1e-6) return false;
+
+  const step = Math.min(OWNER_TOUCH_STEP, length * 0.49);
+  const ux = dx / length;
+  const uy = dy / length;
+
+  let sx = x1;
+  let sy = y1;
+  let ex = x2;
+  let ey = y2;
+
+  if (allowStartTouch) {
+    sx += ux * step;
+    sy += uy * step;
+    if (pointInShape(sx, sy, ownerShape)) return true;
+  }
+
+  if (allowEndTouch) {
+    ex -= ux * step;
+    ey -= uy * step;
+    if (pointInShape(ex, ey, ownerShape)) return true;
+  }
+
+  if (Math.hypot(ex - sx, ey - sy) < 1e-6) return false;
+  return segmentIntersectsShape(sx, sy, ex, ey, ownerShape);
+}
+
 /** Segment vs ellipse. */
 function segIntersectsEllipse(x1, y1, x2, y2, e) {
   // Transform to unit circle: u = (x-cx)/rx, v = (y-cy)/ry
@@ -506,6 +813,40 @@ function segIntersectsEllipse(x1, y1, x2, y2, e) {
 }
 
 /**
+ * Detect if a horizontal/vertical segment runs along a dashed section border
+ * for a "large" distance. Crossing (non-collinear intersection) is allowed.
+ */
+function segmentOverlapWithDashed(x1, y1, x2, y2) {
+  const TOL = 1.5;
+  const minX = Math.min(x1, x2), maxX = Math.max(x1, x2);
+  const minY = Math.min(y1, y2), maxY = Math.max(y1, y2);
+  for (const sec of DASHED_SECTIONS) {
+    const left = sec.x, top = sec.y, right = sec.x + sec.w, bottom = sec.y + sec.h;
+    // Horizontal segment vs top/bottom border
+    if (Math.abs(y1 - y2) < TOL) {
+      const y = y1;
+      for (const borderY of [top, bottom]) {
+        if (Math.abs(y - borderY) < TOL) {
+          const overlap = Math.min(maxX, right) - Math.max(minX, left);
+          if (overlap > DASH_OVERLAP_MIN) return true;
+        }
+      }
+    }
+    // Vertical segment vs left/right border
+    if (Math.abs(x1 - x2) < TOL) {
+      const x = x1;
+      for (const borderX of [left, right]) {
+        if (Math.abs(x - borderX) < TOL) {
+          const overlap = Math.min(maxY, bottom) - Math.max(minY, top);
+          if (overlap > DASH_OVERLAP_MIN) return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+/**
  * Check if a line segment is blocked by any node shape.
  * @param {Set<string>} excludeIds - node IDs to skip (source + target)
  */
@@ -518,15 +859,22 @@ function isSegmentBlocked(x1, y1, x2, y2, excludeIds) {
       case "ellipse": if (segIntersectsEllipse(x1, y1, x2, y2, s)) return true; break;
     }
   }
+  if (segmentOverlapWithDashed(x1, y1, x2, y2)) return true;
   return false;
 }
 
 /** Check if a polyline (array of {x,y} waypoints) is blocked. */
-function isPolylineBlocked(waypoints, excludeIds) {
+function isPolylineBlocked(waypoints, excludeIds, ownerOptions = {}) {
+  const { startOwner = null, endOwner = null } = ownerOptions;
   for (let i = 0; i < waypoints.length - 1; i++) {
-    if (isSegmentBlocked(waypoints[i].x, waypoints[i].y,
-                         waypoints[i+1].x, waypoints[i+1].y, excludeIds))
-      return true;
+    const start = waypoints[i];
+    const end = waypoints[i + 1];
+    const isFirst = i === 0;
+    const isLast = i === waypoints.length - 2;
+
+    if (isSegmentBlocked(start.x, start.y, end.x, end.y, excludeIds)) return true;
+    if (segmentViolatesOwner(start.x, start.y, end.x, end.y, startOwner, { allowStartTouch: isFirst })) return true;
+    if (segmentViolatesOwner(start.x, start.y, end.x, end.y, endOwner, { allowEndTouch: isLast })) return true;
   }
   return false;
 }
@@ -561,7 +909,7 @@ function allocatePort(nodeId, targetX, targetY, dir) {
     const p = ports[i];
     const dx = p.x - targetX;
     const dy = p.y - targetY;
-    indices.push({ i, dist: dx * dx + dy * dy }); // squared distance for sorting
+    indices.push({ i, dist: Math.min(Math.abs(dx), Math.abs(dy)) });
   }
   indices.sort((a, b) => a.dist - b.dist);
 
@@ -575,7 +923,7 @@ function allocatePort(nodeId, targetX, targetY, dir) {
       const p = ports[i];
       const dx = p.x - targetX;
       const dy = p.y - targetY;
-      const d = dx * dx + dy * dy;
+      const d = Math.min(Math.abs(dx), Math.abs(dy));
       if (d < bestDist) { bestDist = d; bestIdx = i; }
     }
   } else {
@@ -593,10 +941,241 @@ function edgeConnectionType(edge) {
   return EDGE_CONNECTION_TYPES.CONNECTED;
 }
 
+function collisionShapeBounds(shape) {
+  switch (shape.type) {
+    case "rect":
+      return { xMin: shape.xMin, xMax: shape.xMax, yMin: shape.yMin, yMax: shape.yMax };
+    case "ellipse":
+      return {
+        xMin: shape.cx - shape.rx,
+        xMax: shape.cx + shape.rx,
+        yMin: shape.cy - shape.ry,
+        yMax: shape.cy + shape.ry,
+      };
+    case "polygon": {
+      let xMin = Infinity, xMax = -Infinity, yMin = Infinity, yMax = -Infinity;
+      for (const v of shape.verts) {
+        if (v.x < xMin) xMin = v.x;
+        if (v.x > xMax) xMax = v.x;
+        if (v.y < yMin) yMin = v.y;
+        if (v.y > yMax) yMax = v.y;
+      }
+      return { xMin, xMax, yMin, yMax };
+    }
+    default:
+      return null;
+  }
+}
+
+function smallestContainingSection(node) {
+  return SECTIONS
+    .filter(section => (
+      node.x >= section.x
+      && node.x <= section.x + section.w
+      && node.y >= section.y
+      && node.y <= section.y + section.h
+    ))
+    .sort((a, b) => (a.w * a.h) - (b.w * b.h))[0] ?? null;
+}
+
+function selfLoopSideVectors(side) {
+  switch (side) {
+    case "top":
+      return { normal: { x: 0, y: -1 }, tangent: { x: 1, y: 0 } };
+    case "right":
+      return { normal: { x: 1, y: 0 }, tangent: { x: 0, y: 1 } };
+    case "bottom":
+      return { normal: { x: 0, y: 1 }, tangent: { x: 1, y: 0 } };
+    case "left":
+      return { normal: { x: -1, y: 0 }, tangent: { x: 0, y: 1 } };
+    default:
+      return { normal: { x: 1, y: 0 }, tangent: { x: 0, y: 1 } };
+  }
+}
+
+function selfLoopBoundaryClearance(node, side, container) {
+  if (!container) return 220;
+
+  switch (side) {
+    case "top":
+      return node.y - container.y;
+    case "right":
+      return container.x + container.w - node.x;
+    case "bottom":
+      return container.y + container.h - node.y;
+    case "left":
+      return node.x - container.x;
+    default:
+      return 0;
+  }
+}
+
+function selfLoopNeighborBias(node, side, extentX, extentY) {
+  let bias = 0;
+
+  const rowTolerance = extentY * 2.5 + 24;
+  let nearestRow = null;
+  for (const other of NODES) {
+    if (other.id === node.id) continue;
+    if (Math.abs(other.y - node.y) > rowTolerance) continue;
+    const dx = other.x - node.x;
+    if (Math.abs(dx) < 1) continue;
+    const distance = Math.abs(dx);
+    if (!nearestRow || distance < nearestRow.distance) {
+      nearestRow = { dx, distance };
+    }
+  }
+
+  if (nearestRow) {
+    const awaySide = nearestRow.dx > 0 ? "left" : "right";
+    const towardSide = nearestRow.dx > 0 ? "right" : "left";
+    if (side === awaySide) bias += 90;
+    if (side === towardSide) bias -= 90;
+  }
+
+  const columnTolerance = extentX * 1.3 + 28;
+  let nearestColumn = null;
+  for (const other of NODES) {
+    if (other.id === node.id) continue;
+    if (Math.abs(other.x - node.x) > columnTolerance) continue;
+    const dy = other.y - node.y;
+    if (Math.abs(dy) < 1) continue;
+    const distance = Math.abs(dy);
+    if (!nearestColumn || distance < nearestColumn.distance) {
+      nearestColumn = { dy, distance };
+    }
+  }
+
+  if (nearestColumn) {
+    const awaySide = nearestColumn.dy > 0 ? "top" : "bottom";
+    const towardSide = nearestColumn.dy > 0 ? "bottom" : "top";
+    if (side === awaySide) bias += 54;
+    if (side === towardSide) bias -= 54;
+  }
+
+  if (side === "top") bias += 8;
+  return bias;
+}
+
+function selfLoopObstaclePenalty(node, endpointId, side, extentX, extentY) {
+  const { normal, tangent } = selfLoopSideVectors(side);
+  const horizontalSide = side === "top" || side === "bottom";
+  const laneHalfSpan = horizontalSide ? extentX * 0.9 + 24 : extentY * 1.1 + 24;
+
+  let penalty = 0;
+  for (const shape of collisionShapes) {
+    if (shape.id === endpointId) continue;
+
+    const bounds = collisionShapeBounds(shape);
+    if (!bounds) continue;
+
+    const centerX = (bounds.xMin + bounds.xMax) / 2;
+    const centerY = (bounds.yMin + bounds.yMax) / 2;
+    const vx = centerX - node.x;
+    const vy = centerY - node.y;
+    const forward = vx * normal.x + vy * normal.y;
+    if (forward <= 0) continue;
+
+    const lateral = Math.abs(vx * tangent.x + vy * tangent.y);
+    const obstacleHalfSpan = horizontalSide
+      ? (bounds.xMax - bounds.xMin) / 2
+      : (bounds.yMax - bounds.yMin) / 2;
+    const envelope = laneHalfSpan + obstacleHalfSpan + 12;
+    if (lateral >= envelope) continue;
+
+    penalty += (envelope - lateral) * 0.45 + 160 / Math.max(forward, 32);
+  }
+
+  return penalty;
+}
+
+function selectSelfLoopSide(node, endpointId, extentX, extentY) {
+  const container = smallestContainingSection(node);
+  const sides = ["top", "right", "bottom", "left"];
+
+  let best = null;
+  for (const side of sides) {
+    const score = selfLoopBoundaryClearance(node, side, container) * 0.35
+      + selfLoopNeighborBias(node, side, extentX, extentY)
+      - selfLoopObstaclePenalty(node, endpointId, side, extentX, extentY);
+
+    if (!best || score > best.score) best = { side, score };
+  }
+
+  return best?.side ?? "right";
+}
+
+function fallbackSelfLoopAnchors(node, side, extentX, extentY) {
+  switch (side) {
+    case "top":
+      return {
+        start: { x: node.x - extentX * 0.45, y: node.y - extentY },
+        end: { x: node.x + extentX * 0.45, y: node.y - extentY },
+      };
+    case "right":
+      return {
+        start: { x: node.x + extentX, y: node.y - extentY * 0.45 },
+        end: { x: node.x + extentX, y: node.y + extentY * 0.45 },
+      };
+    case "bottom":
+      return {
+        start: { x: node.x - extentX * 0.45, y: node.y + extentY },
+        end: { x: node.x + extentX * 0.45, y: node.y + extentY },
+      };
+    case "left":
+      return {
+        start: { x: node.x - extentX, y: node.y - extentY * 0.45 },
+        end: { x: node.x - extentX, y: node.y + extentY * 0.45 },
+      };
+    default:
+      return {
+        start: { x: node.x + extentX, y: node.y - extentY * 0.45 },
+        end: { x: node.x + extentX, y: node.y + extentY * 0.45 },
+      };
+  }
+}
+
+function selectSelfLoopAnchors(endpointId, node, side, extentX, extentY) {
+  const candidates = nodeEndpointCandidates(endpointId);
+  if (candidates.length === 0) return fallbackSelfLoopAnchors(node, side, extentX, extentY);
+
+  let band = [];
+  if (side === "top") {
+    const topY = Math.min(...candidates.map(p => p.y));
+    band = candidates.filter(p => p.y <= topY + Math.max(6, extentY * 0.55));
+    const ordered = [...band].sort((a, b) => a.x - b.x);
+    if (ordered.length >= 2) return { start: ordered[0], end: ordered[ordered.length - 1] };
+  }
+
+  if (side === "right") {
+    const rightX = Math.max(...candidates.map(p => p.x));
+    band = candidates.filter(p => p.x >= rightX - Math.max(6, extentX * 0.3));
+    const ordered = [...band].sort((a, b) => a.y - b.y);
+    if (ordered.length >= 2) return { start: ordered[0], end: ordered[ordered.length - 1] };
+  }
+
+  if (side === "bottom") {
+    const bottomY = Math.max(...candidates.map(p => p.y));
+    band = candidates.filter(p => p.y >= bottomY - Math.max(6, extentY * 0.55));
+    const ordered = [...band].sort((a, b) => a.x - b.x);
+    if (ordered.length >= 2) return { start: ordered[0], end: ordered[ordered.length - 1] };
+  }
+
+  if (side === "left") {
+    const leftX = Math.min(...candidates.map(p => p.x));
+    band = candidates.filter(p => p.x <= leftX + Math.max(6, extentX * 0.3));
+    const ordered = [...band].sort((a, b) => a.y - b.y);
+    if (ordered.length >= 2) return { start: ordered[0], end: ordered[ordered.length - 1] };
+  }
+
+  return fallbackSelfLoopAnchors(node, side, extentX, extentY);
+}
+
 /**
  * Select start/end points for a self loop.
- * Node loops leave and re-enter from the outer-right side; section loops use
- * two points on the rectangle's right edge.
+ * Sections keep a simple right-side loop.
+ * Nodes pick the least crowded side, then use two dedicated anchors on that
+ * side instead of reusing the generic port allocator.
  */
 function selectSelfLoopEndpoints(endpointId, endpointInfo) {
   if (endpointInfo.isSection && endpointInfo.rect) {
@@ -606,6 +1185,7 @@ function selectSelfLoopEndpoints(endpointId, endpointInfo) {
       end: { x: rect.x + rect.w, y: rect.y + rect.h * 0.72 },
       extentX: rect.w / 2,
       extentY: rect.h / 2,
+      side: "right",
     };
   }
 
@@ -616,59 +1196,158 @@ function selectSelfLoopEndpoints(endpointId, endpointInfo) {
       end: { x: endpointInfo.x, y: endpointInfo.y + 20 },
       extentX: 30,
       extentY: 20,
+      side: "right",
     };
   }
 
-  const sz = SHAPE_SIZES[node.shape];
+  const sz = node._size || SHAPE_SIZES[node.shape];
   const extentX = sz.width ? sz.width / 2 : sz.rx;
   const extentY = sz.height ? sz.height / 2 : sz.ry;
-  const loopTargetX = node.x + extentX + 2000;
+  const side = selectSelfLoopSide(node, endpointId, extentX, extentY);
+  const { start, end } = selectSelfLoopAnchors(endpointId, node, side, extentX, extentY);
 
   return {
-    start: allocatePort(endpointId, loopTargetX, node.y - extentY, "out"),
-    end: allocatePort(endpointId, loopTargetX, node.y + extentY, "in"),
+    start,
+    end,
     extentX,
     extentY,
+    side,
+  };
+}
+
+function computeSelfLoopLayout(endpointId, endpointInfo, offset) {
+  let { start, end, extentX, extentY, side } = selectSelfLoopEndpoints(endpointId, endpointInfo);
+  const horizontalSide = side === "top" || side === "bottom";
+
+  if (horizontalSide) {
+    if (start.x > end.x) [start, end] = [end, start];
+    if (Math.abs(end.x - start.x) < 18) {
+      const pad = Math.max(12, extentX * 0.22);
+      start = { x: start.x - pad, y: start.y };
+      end = { x: end.x + pad, y: end.y };
+    }
+  } else {
+    if (start.y > end.y) [start, end] = [end, start];
+    if (Math.abs(end.y - start.y) < 12) {
+      const pad = Math.max(12, extentY * 0.45);
+      start = { x: start.x, y: start.y - pad };
+      end = { x: end.x, y: end.y + pad };
+    }
+  }
+
+  const outward = Math.max(
+    26,
+    horizontalSide ? extentY * 0.82 : extentX * 0.72,
+  ) + Math.abs(offset) * 1.5;
+
+  let control1;
+  let control2;
+  let labelPos;
+  switch (side) {
+    case "top": {
+      const loopY = Math.min(start.y, end.y) - outward;
+      control1 = { x: start.x, y: loopY };
+      control2 = { x: end.x, y: loopY };
+      labelPos = { x: (start.x + end.x) / 2, y: loopY - 6 };
+      break;
+    }
+    case "right": {
+      const loopX = Math.max(start.x, end.x) + outward;
+      control1 = { x: loopX, y: start.y };
+      control2 = { x: loopX, y: end.y };
+      labelPos = { x: loopX + 12, y: (start.y + end.y) / 2 - 5 };
+      break;
+    }
+    case "bottom": {
+      const loopY = Math.max(start.y, end.y) + outward;
+      control1 = { x: start.x, y: loopY };
+      control2 = { x: end.x, y: loopY };
+      labelPos = { x: (start.x + end.x) / 2, y: loopY + 14 };
+      break;
+    }
+    case "left":
+    default: {
+      const loopX = Math.min(start.x, end.x) - outward;
+      control1 = { x: loopX, y: start.y };
+      control2 = { x: loopX, y: end.y };
+      labelPos = { x: loopX - 12, y: (start.y + end.y) / 2 - 5 };
+      break;
+    }
+  }
+
+  return {
+    start,
+    end,
+    side,
+    labelPos,
+    path: `M ${start.x},${start.y} C ${control1.x},${control1.y} ${control2.x},${control2.y} ${end.x},${end.y}`,
   };
 }
 
 function buildSelfLoopPath(edge, endpointId, endpointInfo, offset) {
-  let { start, end, extentX, extentY } = selectSelfLoopEndpoints(endpointId, endpointInfo);
-  if (start.y > end.y) [start, end] = [end, start];
-
-  if (Math.abs(end.y - start.y) < 12) {
-    const pad = Math.max(12, extentY * 0.45);
-    start = { x: start.x, y: start.y - pad };
-    end = { x: end.x, y: end.y + pad };
-  }
-
-  const loopX = Math.max(start.x, end.x) + Math.max(42, extentX * 0.7) + Math.abs(offset) * 2;
-  const handleY = Math.max(16, extentY * 0.3);
-
-  edge._labelPos = { x: loopX + 12, y: (start.y + end.y) / 2 - 5 };
-  return `M ${start.x},${start.y} C ${loopX},${start.y - handleY} ${loopX},${end.y + handleY} ${end.x},${end.y}`;
+  const layout = edge._selfLoopLayout ?? computeSelfLoopLayout(endpointId, endpointInfo, offset);
+  edge._selfLoopLayout = layout;
+  edge._selfLoopAnchors = { start: layout.start, end: layout.end };
+  edge._selfLoopSide = layout.side;
+  edge._labelPos = layout.labelPos;
+  return layout.path;
 }
 
-// ── Parallel-edge offset grouping ────────────────────────────────────────
-// Edges sharing the same UNORDERED pair (A↔B) get a unique offset so
-// bidirectional edges between the same nodes don't overlap.
-function computeOffsets() {
-  const biGroups = {};
-  EDGES.forEach(e => {
-    const biKey = [e.source, e.target].sort().join('|');
-    (biGroups[biKey] ??= []).push(e.id);
-  });
-  const offsets = {};
-  for (const ids of Object.values(biGroups)) {
-    ids.forEach((id, i) => {
-      offsets[id] = { index: i, total: ids.length };
-    });
+function reserveSelfLoopLayouts() {
+  for (const edge of EDGES) {
+    edge._selfLoopLayout = null;
+    edge._selfLoopAnchors = null;
+    edge._selfLoopSide = null;
+
+    if (edgeConnectionType(edge) !== EDGE_CONNECTION_TYPES.SELF) continue;
+
+    const endpointInfo = resolveEndpoint(edge.source);
+    if (!endpointInfo) continue;
+
+    const { index, total } = OFFSETS[edge.id] || { index: 0, total: 1 };
+    const offset = (index - (total - 1) / 2) * OFFSET_PX;
+    const layout = computeSelfLoopLayout(edge.source, endpointInfo, offset);
+    edge._selfLoopLayout = layout;
+    edge._selfLoopAnchors = { start: layout.start, end: layout.end };
+    edge._selfLoopSide = layout.side;
+
+    if (!allocatedNodePorts.has(edge.source)) allocatedNodePorts.set(edge.source, []);
+    allocatedNodePorts.get(edge.source).push(layout.start, layout.end);
   }
+}
+
+// ── Cross-panel corridor offset grouping ─────────────────────────────────
+// Intra-panel edges rely on endpoint selection to separate themselves.
+// Only cross-panel edges receive corridor offsets so their shared vertical
+// trunks do not collapse onto the same x lane.
+function computeOffsets() {
+  const crossPanelEdges = [];
+  EDGES.forEach(e => {
+    const s = resolveEndpoint(e.source);
+    const t = resolveEndpoint(e.target);
+    const isCross = isFedAnchor(s) !== isFedAnchor(t);
+    if (isCross) {
+      crossPanelEdges.push(e);
+    }
+  });
+
+  const offsets = {};
+  // Globally sort cross-panel edges by combined Y so adjacent edges
+  // receive adjacent corridor lanes spaced by MIN_GAP.
+  crossPanelEdges.sort((a, b) => {
+    const sa = resolveEndpoint(a.source), ta = resolveEndpoint(a.target);
+    const sb = resolveEndpoint(b.source), tb = resolveEndpoint(b.target);
+    return (sa.y + ta.y) - (sb.y + tb.y);
+  });
+  crossPanelEdges.forEach((e, i) => {
+    offsets[e.id] = { index: i, total: crossPanelEdges.length };
+  });
+
   return offsets;
 }
 
 const OFFSETS = computeOffsets();
-const OFFSET_PX = 8;
+const OFFSET_PX = ROUTING_OFFSET_PX;
 
 /**
  * Build edge path with obstacle-aware routing:
@@ -681,10 +1360,17 @@ function edgePath(edge) {
   const srcInfo = resolveEndpoint(edge.source);
   const tgtInfo = resolveEndpoint(edge.target);
   if (!srcInfo || !tgtInfo) { edge._labelPos = { x: 0, y: 0 }; return ""; }
+  edge._waypoints = null;
+  edge._selfLoopAnchors = null;
+  edge._selfLoopSide = null;
+  const sourceOwner = ownerShapeForEndpoint(edge.source, srcInfo);
+  const targetOwner = ownerShapeForEndpoint(edge.target, tgtInfo);
+  const ownerOptions = { startOwner: sourceOwner, endOwner: targetOwner };
+  const routeContextBase = { sourceInfo: srcInfo, targetInfo: tgtInfo, sourceOwner, targetOwner };
 
   const connectionType = edgeConnectionType(edge);
   const { index, total } = OFFSETS[edge.id] || { index: 0, total: 1 };
-  const step = Math.min(OFFSET_PX, Math.max(4, 60 / total));
+  const step = OFFSET_PX;
   const offset = (index - (total - 1) / 2) * step;
 
   if (connectionType === EDGE_CONNECTION_TYPES.SELF) {
@@ -698,23 +1384,36 @@ function edgePath(edge) {
   if (!tgtIsSec) excludeIds.add(edge.target);
 
   const crossPanel = isFedAnchor(srcInfo) !== isFedAnchor(tgtInfo);
+
+  const srcAllocated = allocatedNodePorts.get(edge.source) || [];
+  const tgtAllocated = allocatedNodePorts.get(edge.target) || [];
   const srcCandidates = endpointCandidates(edge.source, srcInfo);
   const tgtCandidates = endpointCandidates(edge.target, tgtInfo);
 
   let pair;
   if (srcIsSec && srcInfo.rect) {
-    pair = sectionEdgePoint(srcInfo.rect, tgtCandidates, {
+    const secCandidates = sectionEndpointCandidates(srcInfo.rect);
+    pair = selectBestEndpointPair(secCandidates, tgtCandidates, {
       sourceInfo: srcInfo,
       targetInfo: tgtInfo,
       excludeIds,
       crossPanel,
+      sourceOwner,
+      targetOwner,
+      sourceAllocated: srcAllocated,
+      targetAllocated: tgtAllocated,
     });
   } else if (tgtIsSec && tgtInfo.rect) {
-    const reversePair = sectionEdgePoint(tgtInfo.rect, srcCandidates, {
+    const secCandidates = sectionEndpointCandidates(tgtInfo.rect);
+    const reversePair = selectBestEndpointPair(secCandidates, srcCandidates, {
       sourceInfo: tgtInfo,
       targetInfo: srcInfo,
       excludeIds,
       crossPanel,
+      sourceOwner: targetOwner,
+      targetOwner: sourceOwner,
+      sourceAllocated: tgtAllocated,
+      targetAllocated: srcAllocated,
     });
     pair = { start: reversePair.end, end: reversePair.start, cost: reversePair.cost };
   } else {
@@ -723,8 +1422,18 @@ function edgePath(edge) {
       targetInfo: tgtInfo,
       excludeIds,
       crossPanel,
+      sourceOwner,
+      targetOwner,
+      sourceAllocated: srcAllocated,
+      targetAllocated: tgtAllocated,
     });
   }
+
+  // Record allocated ports so subsequent edges keep ≥MIN_GAP spacing
+  if (!allocatedNodePorts.has(edge.source)) allocatedNodePorts.set(edge.source, []);
+  if (!allocatedNodePorts.has(edge.target)) allocatedNodePorts.set(edge.target, []);
+  allocatedNodePorts.get(edge.source).push(pair.start);
+  allocatedNodePorts.get(edge.target).push(pair.end);
 
   const sp = pair.start;
   const tp = pair.end;
@@ -740,6 +1449,8 @@ function edgePath(edge) {
       { x: cx, y: tp.y },
       { x: tp.x, y: tp.y },
     ]);
+    edge._waypoints = pts;
+    rememberRoutedSegments(edge.id, pts);
     edge._labelPos = { x: cx + 10, y: (sp.y + tp.y) / 2 };
     return pointsToPath(pts);
   }
@@ -754,16 +1465,23 @@ function edgePath(edge) {
   const edgeLen = Math.abs(startX - endX) + Math.abs(startY - endY);
 
   if (offset === 0 && axisAligned && edgeLen >= MIN_EDGE_LEN &&
-      !isSegmentBlocked(startX, startY, endX, endY, excludeIds)) {
+      !isPolylineBlocked([{ x: startX, y: startY }, { x: endX, y: endY }], excludeIds, ownerOptions)) {
     // Axis-aligned clear line-of-sight → straight line
+    edge._waypoints = normalizeWaypoints([{ x: startX, y: startY }, { x: endX, y: endY }]);
+    rememberRoutedSegments(edge.id, edge._waypoints);
     edge._labelPos = { x: (startX + endX) / 2, y: (startY + endY) / 2 - 5 };
     return `M ${startX},${startY} L ${endX},${endY}`;
   }
 
   // ── Polyline routing (max 2 turns) ──────────────────────────────────
-  // Generate candidate routes and pick the first unblocked one.
-  const polyline = findPolylineRoute(startX, startY, endX, endY, excludeIds, offset);
+  const polyline = findPolylineRoute(startX, startY, endX, endY, excludeIds, offset, {
+    ...routeContextBase,
+    crossPanel,
+    ownerOptions,
+  });
   const pts = polyline.waypoints;
+  edge._waypoints = pts;
+  rememberRoutedSegments(edge.id, pts);
   edge._labelPos = polyline.labelPos;
 
   return pointsToPath(pts);
@@ -830,7 +1548,7 @@ function findSafeCorridors(sweepMin, sweepMax, corridorAxis, excludeIds, margin 
   }
 
   // Collect safe positions: outside merged ranges and in gaps
-  const safe = [];
+  let safe = [];
   safe.push(merged[0].min - margin);
   safe.push(merged[merged.length - 1].max + margin);
   for (let i = 0; i < merged.length - 1; i++) {
@@ -839,7 +1557,58 @@ function findSafeCorridors(sweepMin, sweepMax, corridorAxis, excludeIds, margin 
       safe.push((merged[i].max + merged[i + 1].min) / 2);
     }
   }
+  const used = usedCorridors.get(corridorAxis) || [];
+  if (used.length > 0) {
+    const filtered = safe.filter(pos => used.every(u => Math.abs(pos - u) >= MIN_GAP));
+    if (filtered.length > 0) safe = filtered;
+  }
   return safe;
+}
+
+function buildAxisAlignedOffsetLane(sx, sy, ex, ey, offset) {
+  if (Math.abs(offset) <= 0.1) return null;
+
+  if (Math.abs(sy - ey) < 2) {
+    const dir = Math.sign(ex - sx) || 1;
+    const laneY = sy + offset;
+    const maxTangent = Math.abs(ex - sx) / 2 - 4;
+    if (maxTangent < 4) return null;
+
+    const tangent = Math.min(Math.max(12, Math.abs(offset) * 2), maxTangent);
+    return {
+      waypoints: [
+        { x: sx, y: sy },
+        { x: sx + dir * tangent, y: sy },
+        { x: sx + dir * tangent, y: laneY },
+        { x: ex - dir * tangent, y: laneY },
+        { x: ex - dir * tangent, y: ey },
+        { x: ex, y: ey },
+      ],
+      labelPos: { x: (sx + ex) / 2, y: laneY - 5 },
+    };
+  }
+
+  if (Math.abs(sx - ex) < 2) {
+    const dir = Math.sign(ey - sy) || 1;
+    const laneX = sx + offset;
+    const maxTangent = Math.abs(ey - sy) / 2 - 4;
+    if (maxTangent < 4) return null;
+
+    const tangent = Math.min(Math.max(12, Math.abs(offset) * 2), maxTangent);
+    return {
+      waypoints: [
+        { x: sx, y: sy },
+        { x: sx, y: sy + dir * tangent },
+        { x: laneX, y: sy + dir * tangent },
+        { x: laneX, y: ey - dir * tangent },
+        { x: ex, y: ey - dir * tangent },
+        { x: ex, y: ey },
+      ],
+      labelPos: { x: laneX + 10, y: (sy + ey) / 2 - 5 },
+    };
+  }
+
+  return null;
 }
 
 /**
@@ -847,10 +1616,27 @@ function findSafeCorridors(sweepMin, sweepMax, corridorAxis, excludeIds, margin 
  * Tries L-shapes (1 turn) first, then Z-shapes (2 turns), then dynamic corridors.
  * Each segment is axis-aligned (horizontal or vertical).
  */
-function findPolylineRoute(sx, sy, ex, ey, excludeIds, offset) {
+function findPolylineRoute(sx, sy, ex, ey, excludeIds, offset, routeContext = {}) {
   const dx = ex - sx, dy = ey - sy;
   const preferredMidX = (sx + ex) / 2 + offset;
   const preferredMidY = (sy + ey) / 2 + offset;
+  const ownerOptions = routeContext.ownerOptions ?? {};
+  let best = null;
+
+  function considerCandidate(waypoints, labelPos, corridorAxis = null, corridorPos = null, extraPenalty = 0) {
+    const normalized = normalizeWaypoints(waypoints);
+    if (isPolylineBlocked(normalized, excludeIds, ownerOptions)) return;
+
+    const cost = polylineLength(normalized) + routePenalty(normalized, routeContext) + extraPenalty;
+    if (!best || cost < best.cost) {
+      best = { waypoints: normalized, labelPos, cost, corridorAxis, corridorPos };
+    }
+  }
+
+  const offsetLane = buildAxisAlignedOffsetLane(sx, sy, ex, ey, offset);
+  if (offsetLane) {
+    considerCandidate(offsetLane.waypoints, offsetLane.labelPos, null, null, 120);
+  }
 
   // ── L-shape candidates (1 turn) ──
   const lCandidates = [
@@ -861,12 +1647,7 @@ function findPolylineRoute(sx, sy, ex, ey, excludeIds, offset) {
   ];
 
   for (const pts of lCandidates) {
-    if (!isPolylineBlocked(pts, excludeIds)) {
-      return {
-        waypoints: pts,
-        labelPos: { x: pts[1].x, y: pts[1].y - 5 }, // label at corner
-      };
-    }
+    considerCandidate(pts, { x: pts[1].x, y: pts[1].y - 5 });
   }
 
   // ── Z-shape candidates (2 turns) ──
@@ -901,16 +1682,11 @@ function findPolylineRoute(sx, sy, ex, ey, excludeIds, offset) {
   }
 
   for (const pts of zCandidates) {
-    if (!isPolylineBlocked(pts, excludeIds)) {
-      const midSeg = Math.floor(pts.length / 2);
-      return {
-        waypoints: pts,
-        labelPos: {
-          x: (pts[midSeg - 1].x + pts[midSeg].x) / 2,
-          y: (pts[midSeg - 1].y + pts[midSeg].y) / 2 - 5,
-        },
-      };
-    }
+    const midSeg = Math.floor(pts.length / 2);
+    considerCandidate(pts, {
+      x: (pts[midSeg - 1].x + pts[midSeg].x) / 2,
+      y: (pts[midSeg - 1].y + pts[midSeg].y) / 2 - 5,
+    });
   }
 
   // ── Dynamic corridor routing ──
@@ -923,12 +1699,7 @@ function findPolylineRoute(sx, sy, ex, ey, excludeIds, offset) {
   safeX.sort((a, b) => Math.abs(a - mx) - Math.abs(b - mx));
   for (const cx of safeX) {
     const pts = [{ x: sx, y: sy }, { x: cx, y: sy }, { x: cx, y: ey }, { x: ex, y: ey }];
-    if (!isPolylineBlocked(pts, excludeIds)) {
-      return {
-        waypoints: pts,
-        labelPos: { x: cx + 10, y: (sy + ey) / 2 - 5 },
-      };
-    }
+    considerCandidate(pts, { x: cx + 10, y: (sy + ey) / 2 - 5 }, 'x', cx, 40);
   }
 
   // Safe horizontal corridors (find clear y positions)
@@ -937,12 +1708,14 @@ function findPolylineRoute(sx, sy, ex, ey, excludeIds, offset) {
   safeY.sort((a, b) => Math.abs(a - my) - Math.abs(b - my));
   for (const cy of safeY) {
     const pts = [{ x: sx, y: sy }, { x: sx, y: cy }, { x: ex, y: cy }, { x: ex, y: ey }];
-    if (!isPolylineBlocked(pts, excludeIds)) {
-      return {
-        waypoints: pts,
-        labelPos: { x: (sx + ex) / 2, y: cy - 5 },
-      };
+    considerCandidate(pts, { x: (sx + ex) / 2, y: cy - 5 }, 'y', cy, 40);
+  }
+
+  if (best) {
+    if (best.corridorAxis) {
+      usedCorridors.set(best.corridorAxis, [...(usedCorridors.get(best.corridorAxis) || []), best.corridorPos]);
     }
+    return best;
   }
 
   // Fallback: use the first L-shape even though it's blocked
@@ -975,7 +1748,7 @@ export function defineMarkers(defs) {
       .attr("refY", 3)
       .attr("markerWidth", 8)
       .attr("markerHeight", 6)
-      .attr("orient", "auto")
+      .attr("orient", "auto-start-reverse")
       .append("path")
         .attr("d", "M0,0 L10,3 L0,6 Z")
         .attr("fill", cfg.color);
@@ -986,8 +1759,12 @@ export function defineMarkers(defs) {
  * Render edge paths and labels into the given layer.
  */
 export function renderEdges(layer, { onEdgeHover, onEdgeOut }) {
-  // Reset port allocations before each full re-render
+  // Reset global allocation state before each full re-render
   usedPorts.clear();
+  allocatedNodePorts.clear();
+  usedCorridors.clear();
+  routedSegments.length = 0;
+  reserveSelfLoopLayouts();
 
   // Pre-compute all edge paths in a single port-allocation pass
   // (avoids inconsistency from calling edgePath/labelPos multiple times)
@@ -1000,12 +1777,37 @@ export function renderEdges(layer, { onEdgeHover, onEdgeOut }) {
 
   // Path — straight, orthogonal, or curve
   g.append("path")
+    .attr("class", "edge-stroke")
     .attr("d", d => d._path)
     .attr("fill", "none")
     .attr("stroke", edgeColor)
-    .attr("stroke-width", 1.6)
+    .attr("stroke-width", EMPTY_VALUE_STROKE_WIDTH)
     .attr("stroke-linejoin", "round")
-    .attr("marker-end", d => `url(#arrow-${d.color})`);
+    .attr("marker-end", d => `url(#arrow-${d.color})`)
+    .attr("marker-start", d => d.connectionType === EDGE_CONNECTION_TYPES.BIDIRECTIONAL ? `url(#arrow-${d.color})` : null);
+
+  g.each(function (d) {
+    const anchors = d._selfLoopAnchors
+      ? [
+        { role: "start", ...d._selfLoopAnchors.start },
+        { role: "end", ...d._selfLoopAnchors.end },
+      ]
+      : [];
+
+    d3.select(this)
+      .selectAll("circle.self-loop-anchor")
+      .data(anchors, anchor => anchor.role)
+      .join("circle")
+        .attr("class", anchor => `self-loop-anchor self-loop-anchor-${anchor.role}`)
+        .attr("cx", anchor => anchor.x)
+        .attr("cy", anchor => anchor.y)
+        .attr("r", anchor => anchor.role === "end" ? 2.8 : 2.3)
+        .attr("fill", "#fff")
+        .attr("stroke", () => edgeColor(d))
+        .attr("stroke-width", 1.2)
+        .attr("opacity", 0.95)
+        .attr("pointer-events", "none");
+  });
 
   // Value label background
   g.append("rect")
@@ -1021,7 +1823,7 @@ export function renderEdges(layer, { onEdgeHover, onEdgeOut }) {
     .attr("d", d => d._path)
     .attr("fill", "none")
     .attr("stroke", "transparent")
-    .attr("stroke-width", 14)
+    .attr("stroke-width", HOVER_WIDTH)
     .style("cursor", "pointer")
     .on("mouseenter", (event, d) => { if (!isSelecting()) onEdgeHover?.(d, event); })
     .on("mouseleave", () => onEdgeOut?.());
@@ -1030,7 +1832,7 @@ export function renderEdges(layer, { onEdgeHover, onEdgeOut }) {
   g.append("text")
     .attr("class", "edge-label")
     .attr("text-anchor", "middle")
-    .attr("font-size", "10px")   /* L7 — var(--fs-edge-label) in diagram.css */
+    .attr("font-size", "16px")   /* L7 — var(--fs-edge-label) in diagram.css */
     .attr("font-weight", "600")
     .attr("fill", "#333")
     .attr("pointer-events", "auto")
@@ -1050,10 +1852,12 @@ export function updateEdgeLabels(edgeGroup, values, metadata, formatValue) {
     const g = d3.select(this);
     const textEl = g.select(".edge-label");
     const bgEl   = g.select(".edge-label-bg");
+    const pathEl = g.select(".edge-stroke");
 
     let display = "";
 
     textEl.text(display);
+    pathEl.attr("stroke-width", display ? EDGE_STROKE_WIDTH : EMPTY_VALUE_STROKE_WIDTH);
 
     if (display) {
       const bbox = textEl.node().getBBox();

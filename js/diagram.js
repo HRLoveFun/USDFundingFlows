@@ -74,25 +74,40 @@ export function highlightTransactionType(typeId) {
     return;
   }
 
+  svg?.attr("data-active-type", typeId);
+
   const matchedEdgeIds = new Set();
-  const matchedNodeIds = new Set();
+  const connectedNodeIds = new Set();
+  const connectedSectionIds = new Set();
 
   EDGES.forEach(e => {
     if (e.color === typeId) {
       matchedEdgeIds.add(e.id);
-      matchedNodeIds.add(e.source);
-      matchedNodeIds.add(e.target);
+      if (e.source.startsWith("sec:")) {
+        connectedSectionIds.add(e.source.slice(4));
+      } else {
+        connectedNodeIds.add(e.source);
+      }
+      if (e.target.startsWith("sec:")) {
+        connectedSectionIds.add(e.target.slice(4));
+      } else {
+        connectedNodeIds.add(e.target);
+      }
     }
   });
 
   cachedEdgeSel.classed("dimmed", d => !matchedEdgeIds.has(d.id));
-  cachedNodeSel.classed("dimmed", d => !matchedNodeIds.has(d.id));
+  cachedNodeSel.classed("highlighted", d => connectedNodeIds.has(d.id));
+  svg.selectAll("g.section").classed("highlighted", d => connectedSectionIds.has(d.id));
 }
 
 /**
  * Reset all highlighting.
  */
 export function resetHighlight() {
+  svg?.attr("data-active-type", null);
   cachedEdgeSel.classed("dimmed", false);
   cachedNodeSel.classed("dimmed", false);
+  cachedNodeSel.classed("highlighted", false);
+  svg?.selectAll("g.section").classed("highlighted", false);
 }

@@ -26,28 +26,28 @@
   --font-mono: "SF Mono", "Fira Code", "Fira Mono", "Roboto Mono", monospace;
 
   /* Typography scale */
-  --fs-page-title:    18px;  --fw-page-title:    600;
-  --fs-section-hdr:   14px;  --fw-section-hdr:   700;
-  --fs-subsection:    13px;  --fw-subsection:    700;
+  --fs-page-title:    24px;  --fw-page-title:    600;
+  --fs-section-hdr:   20px;  --fw-section-hdr:   700;
+  --fs-subsection:    19px;  --fw-subsection:    700;
   /* Unified sub-group level for: Assets, Liabilities, Banks and Dealers,
      Onshore Investors, U.S. Government Entities */
-  --fs-sub-group:      12px;  --fw-sub-group:      600;
-  --fs-group-label:   11px;  --fw-group-label:   600;
-  --fs-annotation:    12px;  --fw-annotation:    700;
-  --fs-node-main:     10px;  --fw-node-main:     600;
-  --fs-node-bs-p:      9px;  --fw-node-bs-p:     500;
-  --fs-node-bs-c:      8px;  --fw-node-bs-c:     400;
-  --fs-badge-main:    10px;  --fw-badge-main:    400;
-  --fs-badge-bs:       8px;  --fw-badge-bs:      400;
-  --fs-edge-label:    10px;  --fw-edge-label:    600;
-  --fs-tooltip:       12px;  --fw-tooltip:       400;
+  --fs-sub-group:      18px;  --fw-sub-group:      600;
+  --fs-group-label:   17px;  --fw-group-label:   600;
+  --fs-annotation:    18px;  --fw-annotation:    700;
+  --fs-node-main:     16px;  --fw-node-main:     600;
+  --fs-node-bs-p:     15px;  --fw-node-bs-p:     500;
+  --fs-node-bs-c:     14px;  --fw-node-bs-c:     400;
+  --fs-badge-main:    16px;  --fw-badge-main:    400;
+  --fs-badge-bs:      14px;  --fw-badge-bs:      400;
+  --fs-edge-label:    16px;  --fw-edge-label:    600;
+  --fs-tooltip:       18px;  --fw-tooltip:       400;
 
   /* Sidebar scale */
-  --fs-panel-hdr:     13px;  --fw-panel-hdr:     600;
-  --fs-btn:           12px;  --fw-btn:           400;
-  --fs-legend:        12px;  --fw-legend:        400;
-  --fs-gloss-term:    12px;  --fw-gloss-term:    600;
-  --fs-gloss-def:     11px;  --fw-gloss-def:     400;
+  --fs-panel-hdr:     19px;  --fw-panel-hdr:     600;
+  --fs-btn:           18px;  --fw-btn:           400;
+  --fs-legend:        18px;  --fw-legend:        400;
+  --fs-gloss-term:    18px;  --fw-gloss-term:    600;
+  --fs-gloss-def:     17px;  --fw-gloss-def:     400;
 
   /* Line heights */
   --lh-tight:   1.2;
@@ -100,6 +100,15 @@ body {
   font-size: var(--fs-page-title);
   font-weight: var(--fw-page-title);
   letter-spacing: var(--ls-header-narrow);
+}
+
+#header h1 a {
+  color: inherit;
+  text-decoration: none;
+}
+
+#header h1 a:hover {
+  text-decoration: underline;
 }
 
 #main {

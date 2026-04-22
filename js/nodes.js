@@ -4,11 +4,12 @@
  *         rectangle (Treasury), bs_parent/bs_child (balance sheet items).
  */
 import { NODES, EDGES, SHAPE_COLORS, SHAPE_SIZES, SECTIONS, ANNOTATIONS, SHAPE_PORTS } from "./constants.js";
+import { NODE_TEXT } from "./config.js";
 import { isSelecting } from "./tooltip.js";
 
 // ── Auto-wrap text helper ──────────────────────────────────────────────
 // Estimate average char width (px) per font-size for balance sheet nodes.
-const CHAR_WIDTH_MAP = { 9: 5.2, 8: 4.6 };
+const { CHAR_WIDTH_MAP } = NODE_TEXT;
 
 function autoWrapText(label, fontSize, maxWidth) {
   const cw = CHAR_WIDTH_MAP[fontSize] || 5;
@@ -141,7 +142,7 @@ export function renderNodes(layer, { onNodeHover, onNodeOut }) {
   g.each(function (d) {
     const sel = d3.select(this);
     const fill = SHAPE_COLORS[d.shape];
-    const sz = SHAPE_SIZES[d.shape];
+    const sz = d._size || SHAPE_SIZES[d.shape];
 
     switch (d.shape) {
       case "hexagon": {
@@ -252,11 +253,10 @@ export function renderNodes(layer, { onNodeHover, onNodeOut }) {
     const isBsChild  = d.shape === "bs_child";
     const isBs       = isBsParent || isBsChild;
 
-    // Auto-wrap text for balance sheet nodes
     let lines;
     if (isBs) {
-      const sz = SHAPE_SIZES[d.shape];
-      lines = autoWrapText(d.label, isBsChild ? 8 : 9, sz.width - 12);
+      const sz = d._size || SHAPE_SIZES[d.shape];
+      lines = d._lines || autoWrapText(d.label, isBsChild ? 14 : 15, sz.width - 12);
       // Dynamically resize rect height to fit wrapped text
       if (lines.length > 1) {
         const lineHeight = isBsChild ? 10 : 11;
@@ -267,7 +267,7 @@ export function renderNodes(layer, { onNodeHover, onNodeOut }) {
           .attr("y", -newH / 2);
       }
     } else {
-      lines = d.label.split("\n");
+      lines = d._lines || d.label.split("\n");
     }
 
     const text = sel.append("text")
@@ -278,7 +278,7 @@ export function renderNodes(layer, { onNodeHover, onNodeOut }) {
       .attr("dominant-baseline", "central")
       .attr("fill", "#1A237E")
       /* L5a/L5b/L5c sizes controlled by diagram.css via shape class */
-      .attr("font-size", isBsChild ? "8px" : (isBs ? "9px" : "10px"))
+      .attr("font-size", isBsChild ? "14px" : (isBs ? "15px" : "16px"))
       .attr("font-weight", isBsChild ? 400 : (isBs ? 500 : 600))
       .attr("pointer-events", "auto");
 
@@ -298,11 +298,11 @@ export function renderNodes(layer, { onNodeHover, onNodeOut }) {
     .attr("class", "node-badge")
     .attr("x", 0)
     .attr("y", d => {
-      const sz = SHAPE_SIZES[d.shape];
+      const sz = d._size || SHAPE_SIZES[d.shape];
       return (sz.radius || sz.ry || sz.height / 2 || 20) + 14;
     })
     .attr("text-anchor", "middle")
-    .attr("font-size", d => (d.shape === "bs_parent" || d.shape === "bs_child") ? "8px" : "10px")
+    .attr("font-size", d => (d.shape === "bs_parent" || d.shape === "bs_child") ? "14px" : "16px")
     .attr("fill", "#555")
     .attr("pointer-events", "auto");
 
@@ -315,6 +315,9 @@ export function renderNodes(layer, { onNodeHover, onNodeOut }) {
 
 /** Highlight edges connected to the given node, dim others. */
 function highlightConnected(svgEl, nodeId) {
+  const svg = d3.select(svgEl);
+  if (svg.attr("data-active-type")) return;
+
   const connectedEdgeIds = new Set();
   const connectedNodeIds = new Set([nodeId]);
 
@@ -326,13 +329,13 @@ function highlightConnected(svgEl, nodeId) {
     }
   });
 
-  const svg = d3.select(svgEl);
   svg.selectAll("g.edge").classed("dimmed", d => !connectedEdgeIds.has(d.id));
   svg.selectAll("g.node").classed("dimmed", d => !connectedNodeIds.has(d.id));
 }
 
 function resetHighlightAll(svgEl) {
   const svg = d3.select(svgEl);
+  if (svg.attr("data-active-type")) return;
   svg.selectAll(".dimmed").classed("dimmed", false);
 }
 
