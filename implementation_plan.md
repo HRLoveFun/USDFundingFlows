@@ -28,73 +28,347 @@
 5. **价差通道（P1）**：每条边叠加"量 + 价"双指标；
 6. **压力探针面板（P2，单独里程碑）**：七大堵点指示器。
 
+### 0.1.1 ⚠️ 架构总约束：原图必须保留（双标签隔离）
+
+> **本约束高于一切模块要求。** 任何改动一旦违反此处规则即视为方案偏离。
+
+- 原图（NY Fed 2019 复刻版）作为 **v1 基线**，**所有源文件保持当前状态不动**——`js/*.js`、`css/*.css`、`index.html` 中的 v1 渲染逻辑均不可修改、不可删除
+- 新功能全部在 **v2 命名空间** 实现：`js/v2/*.js`、`css/v2/*.css`、独立的 SVG 容器
+- 用户通过页面顶部 Tab 切换 v1 / v2，**首次打开默认 v1**（避免改动惊吓既有用户）
+- 数据层 **纯追加**：原 `data/json/*.json` 文件输出口径不变；新数据写入新文件
+- v1 渲染路径任何回归（节点位置、边样式、tooltip 文案变化）都视为 release blocker
+
 ### 0.2 并行工作流总览
 
 ```
-                ┌──────────────── Module A：数据管线扩容 ────────────────┐
-                │   FRED 补全 → Treasury API → NY Fed API → 统一 JSON   │
-                └────────────────┬───────────────────────────────────────┘
+                  ┌──── Module 0：双标签架构搭建 ────┐
+                  │   index.html Tab 容器 + v2 入口    │
+                  │   v1 渲染路径冻结（不可改）         │
+                  └────────────────┬───────────────────┘
+                                   │
+                                   ▼
+                ┌──────── Module A：数据管线扩容 ────────┐
+                │   FRED 补全 → Treasury → NY Fed       │
+                │   ⚠ 原 JSON 输出不变，新数据写新文件    │
+                └────────────────┬───────────────────────┘
                                  │
        ┌─────────────────────────┼─────────────────────────────────┐
        │                         │                                 │
 ┌──────▼──────┐         ┌────────▼────────┐               ┌────────▼────────┐
 │ Module B    │         │ Module C        │               │ Module E         │
-│ 布局重构    │ ←─独立─→│ proxy 映射 +     │   ←依赖A的─→  │ 新连线 (SRF/DW/  │
-│（双面板）   │         │ 节点/边数据绑定   │   完成 outputs│ Foreign RRP)    │
+│ v2 布局     │ ←─独立─→│ v2 proxy 映射 +  │   ←依赖A的─→  │ v2 新连线        │
+│（双面板）   │         │ 节点/边数据绑定   │   完成 outputs│                  │
+│ 路径=js/v2/ │         │ 路径=js/v2/      │               │ 路径=js/v2/      │
 └─────────────┘         └─────────────────┘               └──────────────────┘
                                  │
                                  ▼
                          ┌───────────────┐
-                         │ Module D (P1) │  价差通道 + 压力分位数着色
-                         │ 价/量双层      │
+                         │ Module D (P1) │  v2 价差通道（仅 v2 边渲染）
                          └───────────────┘
                                  │
                                  ▼
                          ┌───────────────┐
-                         │ Module F (P2) │  压力探针 dashboard（独立里程碑）
+                         │ Module F (P2) │  v2 压力探针 dashboard
                          └───────────────┘
 ```
 
 **并行关系**：
+- **Module 0 必须最先完成**——它定义了所有 v2 代码的存放位置与挂载方式
 - **A、B 完全独立**：数据扩容与 SVG 布局重构不冲突，可同时启动
-- **C 依赖 A 的产物**：需要新数据 JSON 才能在 `constants.js` 里绑定
+- **C 依赖 A 的产物**：需要新数据 JSON 才能在 v2 `constants.js` 里绑定
 - **E 依赖 A**：新边的数据来自 A 新拉取的系列
 - **D 依赖 A + C**：需要价差数据 + 已绑定 proxy 的边
 - **F 推迟到独立里程碑**
 
 ---
 
-## 1. Module A — 数据管线扩容
+## 1. Module 0 — 双标签架构搭建（最先执行）
 
-> **负责人指引**：本模块替换/扩展 `data/` 目录下的 Python 流水线，最终产出新的 JSON 文件供前端消费。
+> **必须最先完成**。本模块产出 v1 / v2 共存的"骨架"，之后所有模块都在 v2 容器内填肉。
 
-### 1.1 目标
+### 1.0.1 设计原则
+
+| 维度 | v1（原图） | v2（优化版） |
+|---|---|---|
+| 入口 SVG ID | `#diagram-svg` | `#diagram-svg-v2` |
+| JS 入口 | `js/app.js`（**不动**） | `js/v2/app.js`（新建） |
+| 节点/边定义 | `js/constants.js`（**不动**） | `js/v2/constants.js` |
+| 渲染模块 | `js/nodes.js`、`js/edges.js`、`js/diagram.js`（**不动**） | `js/v2/*` |
+| 样式 | `css/main.css`、`diagram.css`（**仅追加 Tab 样式，不改原 class**） | `css/v2/*` |
+| 数据加载 | `js/data-loader.js`（可共享，**只读不改**） | 共享 v1 的 dataLoader 实例 |
+| 配置常量 | `js/config.js`（**不动**） | `js/v2/config.js`（独立尺寸/颜色） |
+
+**共享 vs 独立的判断标准**：
+- 工具函数（数值格式化、日期解析）→ 共享 v1 现有实现
+- 任何涉及视觉/布局/数据绑定的模块 → 必须 fork 到 v2 命名空间
+
+### 1.0.2 输出文件
+
+```
+index.html                  # 修改：新增 Tab 容器 + v2 SVG 占位
+css/v2/                     # 新建目录
+└── main.css                # v2 专属样式入口（@import 子模块）
+js/v2/                      # 新建目录
+├── app.js                  # v2 入口：初始化、挂载 SVG、注入数据
+├── config.js               # v2 视觉/布局配置（独立于 v1）
+├── constants.js            # v2 节点/边定义（依赖 Module B-E 填充）
+├── diagram.js              # v2 协调器
+├── nodes.js                # v2 节点渲染
+├── edges.js                # v2 连线渲染
+├── tooltip.js              # v2 tooltip
+├── sidebar.js              # v2 侧边栏（如需独立）
+└── layout/                 # 由 Module B 填充
+js/
+└── tab-router.js           # 新建：Tab 切换逻辑（v1/v2 共用）
+```
+
+### 1.0.3 任务清单
+
+#### 0.1 `index.html` 注入 Tab 容器
+
+- [ ] 在现有 SVG 容器外层包裹 Tab 结构。**只追加，不删除既有节点**：
+
+```html
+<!-- index.html — 在 <body> 内，原 #diagram 容器之前插入 -->
+<div class="tab-bar">
+  <button class="tab-btn active" data-tab="v1">
+    NY Fed Original (2019)
+  </button>
+  <button class="tab-btn" data-tab="v2">
+    Optimized View — Liquidity + Pressure
+    <span class="tab-badge-new">NEW</span>
+  </button>
+</div>
+
+<!-- v1 容器：包裹原有 #diagram 内容 -->
+<div class="tab-pane active" data-pane="v1">
+  <!-- 原有 #diagram、侧边栏、控件全部保留在这里，结构不变 -->
+</div>
+
+<!-- v2 容器：新建，初始隐藏 -->
+<div class="tab-pane" data-pane="v2" hidden>
+  <div id="diagram-v2-root">
+    <svg id="diagram-svg-v2" viewBox="0 0 2000 1280"
+         preserveAspectRatio="xMidYMid meet"></svg>
+    <aside id="sidebar-v2"></aside>
+    <div id="time-selector-v2"></div>
+  </div>
+</div>
+
+<!-- 模块加载顺序：v1 先（保持原行为），v2 后（且 lazy） -->
+<script type="module" src="js/app.js"></script>
+<script type="module" src="js/tab-router.js"></script>
+```
+
+> ⚠️ 把现有 `<div id="diagram">` 整个搬进 `<div class="tab-pane active" data-pane="v1">` 里时，**只移动外层包裹，内部任何节点都不可改 ID/class**。否则 v1 的 D3 选择器会断。
+
+#### 0.2 Tab 切换逻辑
+
+- [ ] 新建 `js/tab-router.js`：
+
+```javascript
+// js/tab-router.js
+// 极简 Tab 路由：仅管理 v1/v2 显示切换，不动 v1 渲染
+const STORAGE_KEY = "usdff-active-tab";
+
+let v2Loaded = false;
+
+async function ensureV2Loaded() {
+  if (v2Loaded) return;
+  // 动态 import 避免首屏阻塞 v1
+  const { initV2 } = await import("./v2/app.js");
+  await initV2();
+  v2Loaded = true;
+}
+
+function activate(tab) {
+  document.querySelectorAll(".tab-btn").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.tab === tab);
+  });
+  document.querySelectorAll(".tab-pane").forEach(p => {
+    const match = p.dataset.pane === tab;
+    p.classList.toggle("active", match);
+    p.hidden = !match;
+  });
+  if (tab === "v2") ensureV2Loaded();
+  localStorage.setItem(STORAGE_KEY, tab);
+}
+
+function init() {
+  document.querySelectorAll(".tab-btn").forEach(btn => {
+    btn.addEventListener("click", () => activate(btn.dataset.tab));
+  });
+  // 默认 v1，但记住用户上次选择
+  const saved = localStorage.getItem(STORAGE_KEY);
+  activate(saved === "v2" ? "v2" : "v1");
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", init);
+} else {
+  init();
+}
+```
+
+#### 0.3 `js/v2/app.js` 入口骨架
+
+- [ ] 新建 `js/v2/app.js`，先打通"空 SVG 能加载"：
+
+```javascript
+// js/v2/app.js
+import { DataLoader } from "../data-loader.js";  // 共享 v1 的数据加载器
+import { initDiagram } from "./diagram.js";
+
+let initialized = false;
+
+export async function initV2() {
+  if (initialized) return;
+  const svg = document.getElementById("diagram-svg-v2");
+  if (!svg) throw new Error("[v2] SVG container missing");
+
+  // 共享 dataLoader 实例（v1 已加载过的数据可复用）
+  const dataLoader = window.__v1DataLoader || new DataLoader();
+  await dataLoader.ready;
+  window.__v2DataLoader = dataLoader;
+
+  initDiagram(svg, dataLoader);
+  initialized = true;
+  console.log("[v2] initialized");
+}
+```
+
+- [ ] 在 `js/app.js`（**v1 入口，仅追加一行**）末尾暴露 dataLoader：
+
+```javascript
+// js/app.js — 末尾追加（不修改任何既有逻辑）
+window.__v1DataLoader = dataLoader;
+```
+
+> 这是允许的最小幅度 v1 改动——只是把已有变量暴露到 window。如果不愿意改，v2 自行 `new DataLoader()` 也行（多一次数据加载）。
+
+#### 0.4 占位 v2 模块
+
+为了让 Module 0 自检通过，先建空壳，让 Module B-E 后续填充：
+
+- [ ] `js/v2/diagram.js`：导出 `initDiagram(svg, dataLoader)`，内部仅画一个 placeholder 矩形 + 文字 "v2 渲染就绪，等待 Module B 注入布局"
+- [ ] `js/v2/config.js`：先空导出 `export const CONFIG = {}`
+- [ ] `js/v2/constants.js`：先空导出 `export const NODES = []; export const EDGES = [];`
+- [ ] `js/v2/nodes.js` / `edges.js` / `tooltip.js` / `sidebar.js`：均空模块，预留导出函数签名
+
+#### 0.5 Tab 样式
+
+- [ ] 新建 `css/v2/main.css` 入口（暂时为空）
+- [ ] 在 **`css/main.css`** 追加（这是 v1 文件唯一允许的改动，仅加 Tab UI，不改既有 class）：
+
+```css
+/* css/main.css 追加 —— Tab 样式（仅追加，不改既有规则） */
+.tab-bar {
+  display: flex;
+  gap: 4px;
+  padding: 8px 16px 0;
+  border-bottom: 1px solid #e0e0e0;
+  background: #fafafa;
+}
+.tab-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  border-bottom: none;
+  padding: 8px 16px;
+  font-size: 14px;
+  cursor: pointer;
+  border-radius: 4px 4px 0 0;
+  color: #666;
+}
+.tab-btn:hover { color: #222; }
+.tab-btn.active {
+  background: #fff;
+  border-color: #d0d0d0;
+  color: #111;
+  font-weight: 600;
+  position: relative;
+  top: 1px;  /* 视觉对齐边框 */
+}
+.tab-badge-new {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  font-size: 10px;
+  background: #ff7f0e;
+  color: #fff;
+  border-radius: 8px;
+  font-weight: 700;
+}
+.tab-pane[hidden] { display: none; }
+.tab-pane.active { display: block; }
+```
+
+- [ ] 在 `index.html` 的 `<head>` 中追加 `<link rel="stylesheet" href="css/v2/main.css">`
+
+### 1.0.4 ⭐ Module 0 验收（强制）
+
+```bash
+python3 -m http.server 8000
+# 浏览器打开 http://localhost:8000
+```
+
+**通过条件（全部满足）**：
+1. 默认显示 v1 Tab，**原图渲染与改造前完全一致**——节点位置、颜色、tooltip、侧边栏、时间选择器无任何变化
+2. 点击 "Optimized View" Tab，显示 v2 占位文字 / placeholder 矩形
+3. v1 / v2 切换不报错；切换后 v1 再切回，渲染保持稳定
+4. console 无新增 error / warning
+5. 关闭浏览器重开，记住上次 Tab 选择
+
+> **若 v1 出现任何视觉差异，立即停止后续模块，回到 0.1-0.5 修复。**
+
+---
+
+## 2. Module A — 数据管线扩容（仅追加，禁删改）
+
+> **本模块在 `data/` 目录扩展 Python 流水线**。最重要的约束：**原 JSON 文件输出口径不变**——v1 前端依赖的 `time_series.json` 等文件，新流水线运行后必须生成与改造前**字节级或字段级一致**的内容。新数据写入新文件。
+
+### 2.0 ⚠️ 纯追加规则
+
+| 操作 | 是否允许 |
+|---|---|
+| 在 `series_config.py` 的 `FRED_SERIES` 字典追加新 key | ✅ |
+| 修改 `FRED_SERIES` 中**已有 key** 的值 | ❌ |
+| 在 SQLite 新建表 | ✅ |
+| 修改既有表 schema（增删列、改类型） | ❌ |
+| 在 `export_json.py` 新增 export 函数与新 JSON 文件 | ✅ |
+| 修改既有 export 函数 → 改变原 JSON 输出 | ❌ |
+| 删除 `time_series.json` 中任一原有系列 | ❌ |
+
+### 2.1 目标
 
 - 在现有 FRED 流水线基础上，新增 ~15 个核心系列；
 - 新增独立的 **Treasury Fiscal Data** 拉取脚本（免认证 REST）；
 - 新增独立的 **NY Fed Markets API** 拉取脚本（免认证 REST，含日内分位数）；
-- 三类数据归一化进入同一个 SQLite 库 → 导出统一 JSON。
+- 三类数据归一化进入同一个 SQLite 库 → 导出独立 JSON 文件供 v2 消费，**不动 v1 已用 JSON**。
 
-### 1.2 输出文件
+### 2.2 输出文件
 
 ```
 data/
-├── series_config.py          # 修改：新增 ~15 个 FRED 系列定义
-├── treasury_config.py        # 新建：Treasury 端点配置
-├── nyfed_config.py           # 新建：NY Fed Markets 端点配置
-├── fetch_fred_data.py        # 修改：兼容新系列
+├── series_config.py          # 仅追加新 key 到 FRED_SERIES
+├── treasury_config.py        # 新建
+├── nyfed_config.py           # 新建
+├── fetch_fred_data.py        # 仅追加（兼容新 key），不改既有逻辑
 ├── fetch_treasury_data.py    # 新建
 ├── fetch_nyfed_data.py       # 新建
-├── build_database.py         # 修改：增加新表 schema
-├── export_json.py            # 修改：导出新增字段
-└── json/                     # 新增产物
-    ├── fed_balance_sheet.json   # FED 资产负债表口径汇总
-    ├── treasury_flows.json      # TGA / 拍卖 / 净发行
-    ├── nyfed_operations.json    # ON RRP / SRF / SOFR 分位数
-    └── pressure_indicators.json # 派生指标（spread、99分位差）
+├── build_database.py         # 追加新表 + 派生指标计算，原 schema 不动
+├── export_json.py            # 追加 export_*_v2() 函数，原函数不改
+└── json/                     # v1 文件保持不变；新增 4 个 v2 文件
+    ├── available_dates.json    # ← v1 既有，输出口径不变
+    ├── raw_observations.json   # ← v1 既有，输出口径不变
+    ├── series_metadata.json    # ← v1 既有，输出口径不变
+    ├── time_series.json        # ← v1 既有，输出口径不变
+    ├── fed_balance_sheet.json     # 新增（v2 专用）
+    ├── treasury_flows.json        # 新增（v2 专用）
+    ├── nyfed_operations.json      # 新增（v2 专用）
+    └── pressure_indicators.json   # 新增（v2 专用）
 ```
 
-### 1.3 任务清单
+### 2.3 任务清单
 
 #### A1. 扩充 FRED 系列配置
 
@@ -422,12 +696,16 @@ def compute_derived_indicators(conn):
   - `export_nyfed_operations()` → `nyfed_operations.json`
   - `export_pressure_indicators()` → `pressure_indicators.json`
 
-- [ ] 保持原有 `time_series.json` 兼容性（前端老路径不破坏）
+- [ ] **关键**：原 `time_series.json`、`available_dates.json` 等 v1 文件**输出不变**——v2 新数据全部走新增 export 函数
 
-### 1.4 验收（Module A）
+### 2.4 验收（Module A，强制）
 
 ```bash
 cd data
+
+# 0. 拉取前先备份原 JSON（用于事后字节级比对）
+cp -r json json.before_v2
+
 # 1. 全量拉取
 python3 fetch_fred_data.py
 python3 fetch_treasury_data.py
@@ -437,13 +715,29 @@ python3 build_database.py
 # 3. 导出 JSON
 python3 export_json.py
 
-# 4. 验收检查
+# 4. 验收 A：v1 既有 JSON 必须未变（字节级或字段级一致）
 python3 -c "
 import json, pathlib
-files = ['fed_balance_sheet.json','treasury_flows.json',
-         'nyfed_operations.json','pressure_indicators.json',
-         'available_dates.json','time_series.json']
-for f in files:
+v1_files = ['available_dates.json','raw_observations.json',
+            'series_metadata.json','time_series.json']
+for f in v1_files:
+    before = json.loads(pathlib.Path('json.before_v2',f).read_text())
+    after  = json.loads(pathlib.Path('json',f).read_text())
+    assert before == after, f'❌ v1 文件 {f} 输出已改变！违反纯追加规则'
+    print(f'[OK v1 unchanged] {f}')
+"
+
+# 5. 验收 B：v2 新文件齐全
+python3 -c "
+import json, pathlib
+v2_files = ['fed_balance_sheet.json','treasury_flows.json',
+            'nyfed_operations.json','pressure_indicators.json']
+for f in v2_files:
+    p = pathlib.Path('json')/f
+    assert p.exists(), f'缺失 {f}'
+    print(f'[OK v2 created] {f} {p.stat().st_size//1024}KB')
+"
+```
     p = pathlib.Path('json')/f
     assert p.exists(), f'缺失 {f}'
     data = json.loads(p.read_text())
@@ -451,12 +745,16 @@ for f in files:
 "
 ```
 
-**通过标准**：6 个 JSON 全部存在，`pressure_indicators.json` 中 `sofr_iorb_spread_bps` 至少有 1500 个观测值。
+**通过条件**：
+- v1 既有 4 个 JSON 与备份完全一致（验收 A 不报 AssertionError）
+- v2 新增 4 个 JSON 齐全
+- `pressure_indicators.json` 中 `sofr_iorb_spread_bps` 至少 1500 行
 
 ---
 
-## 2. Module B — 双面板布局重构（与 A 完全并行）
+## 3. Module B — 双面板布局重构（与 A 完全并行）
 
+> **路径约定**：所有产物在 `js/v2/` 与 `css/v2/`。**不修改任何 v1 文件**。
 > **关键参考**：用户提供的面板层级（Section Tree）
 
 ```
@@ -482,28 +780,30 @@ for f in files:
 ### 2.1 输出文件
 
 ```
-js/
+js/v2/
 ├── layout/                    # 新建子目录
 │   ├── panels.js              # 面板层级数据 + 渲染
 │   ├── grid.js                # 行/列布局工具
 │   ├── routing.js             # Manhattan 路由 + 边束捆绑
 │   └── collision.js           # 标签防重叠（forceCollide 包装）
-├── constants.js               # 修改：节点坐标按面板层级重写
-├── diagram.js                 # 修改：渲染顺序加入面板层
-├── nodes.js                   # 修改：节点尺寸适配新分组
-└── edges.js                   # 修改：替换路由逻辑
-css/
-└── diagram.css                # 修改：面板/虚线分组样式
+├── constants.js               # 填充（Module 0 留的空壳）：节点坐标按面板层级
+├── diagram.js                 # 填充：渲染顺序加入面板层
+├── nodes.js                   # 填充：节点尺寸适配新分组
+└── edges.js                   # 填充：使用 routing.js 路由
+css/v2/
+└── diagram.css                # 新建：面板/虚线分组样式（独立于 v1 diagram.css）
 ```
 
-### 2.2 任务清单
+> ⚠️ **不修改任何 v1 文件**。Module 0 已建立 `js/v2/*.js` 空壳，本模块只是填充内容。
+
+### 3.2 任务清单
 
 #### B1. 面板层级数据结构
 
-- [ ] 新建 `js/layout/panels.js`：
+- [ ] 新建 `js/v2/layout/panels.js`：
 
 ```javascript
-// js/layout/panels.js
+// js/v2/layout/panels.js
 // 面板与分组层级（与 SVG viewBox 2150×1280 对齐）
 export const PANELS = {
   fed: {
@@ -572,10 +872,10 @@ export const DASH_GROUPS = [
 
 #### B2. 节点坐标重映射
 
-- [ ] 修改 `js/constants.js`，按 panels.js 的容器位置重新指定每个节点的 `(x, y)`：
+- [ ] 修改 `js/v2/constants.js`，按 panels.js 的容器位置重新指定每个节点的 `(x, y)`：
 
 ```javascript
-// js/constants.js — 节点坐标片段（替换原 NODES 数组）
+// js/v2/constants.js — 节点坐标片段（替换原 NODES 数组）
 export const NODES = [
   // === Fed Balance Sheet 列 ===
   { id: "fed_assets_label",      label: "Assets",      panel: "fed_assets",
@@ -648,10 +948,10 @@ export const NODES = [
 
 #### B3. 面板渲染层
 
-- [ ] 在 `js/diagram.js` 的初始化阶段插入面板绘制（**在节点和边之前渲染**，作为最底层）：
+- [ ] 在 `js/v2/diagram.js` 的初始化阶段插入面板绘制（**在节点和边之前渲染**，作为最底层）：
 
 ```javascript
-// js/diagram.js — 新增片段
+// js/v2/diagram.js — 新增片段
 import { PANELS, DASH_GROUPS } from "./layout/panels.js";
 
 function renderPanels(svg) {
@@ -712,10 +1012,10 @@ function renderDashGroups(svg, nodes) {
 
 #### B4. Manhattan 路由
 
-- [ ] 新建 `js/layout/routing.js`：
+- [ ] 新建 `js/v2/layout/routing.js`：
 
 ```javascript
-// js/layout/routing.js
+// js/v2/layout/routing.js
 // 三段式 Manhattan 路由：源点→水平→垂直→目标点
 // 通过"通道列"（gutter）走线，避免穿越节点矩形
 import { PANELS } from "./panels.js";
@@ -754,7 +1054,7 @@ export function pickRouter(source, target) {
 }
 ```
 
-- [ ] 修改 `js/edges.js`，把现有 `d3.line()` / 直线绘制替换为 `pickRouter` 输出的路径
+- [ ] 修改 `js/v2/edges.js`，把现有 `d3.line()` / 直线绘制替换为 `pickRouter` 输出的路径
 - [ ] 把 `edge_routing_interface_design.md` 中预留的接口对接到 `routing.js`
 
 #### B5. 边束捆绑（Edge Bundling）
@@ -781,10 +1081,10 @@ export function applyBundleOffset(edges) {
 
 #### B6. CSS 样式
 
-- [ ] 修改 `css/diagram.css`：
+- [ ] 修改 `css/v2/diagram.css`：
 
 ```css
-/* css/diagram.css 追加 */
+/* css/v2/diagram.css 追加 */
 .layer-panels .panel {
   fill: none;
   stroke: #c8c8c8;
@@ -850,10 +1150,10 @@ docs/
 
 #### C1. Proxy 注册表
 
-- [ ] 新建 `js/proxy_registry.js`：
+- [ ] 新建 `js/v2/proxy_registry.js`：
 
 ```javascript
-// js/proxy_registry.js
+// js/v2/proxy_registry.js
 // 节点 / 边 → 数据系列的中央映射表
 // 每条记录：primary 主 proxy / secondary 备选 / rationale 理论依据 / source 数据源
 
@@ -1040,10 +1340,10 @@ export const EDGE_PROXIES = {
 
 #### C2. 注入 constants.js
 
-- [ ] 修改 `js/constants.js`，让每个 NODE / EDGE 引用 `NODE_PROXIES` / `EDGE_PROXIES`：
+- [ ] 修改 `js/v2/constants.js`，让每个 NODE / EDGE 引用 `NODE_PROXIES` / `EDGE_PROXIES`：
 
 ```javascript
-// js/constants.js 顶部
+// js/v2/constants.js 顶部
 import { NODE_PROXIES, EDGE_PROXIES } from "./proxy_registry.js";
 
 // 节点构造时附加
@@ -1061,8 +1361,8 @@ export const EDGES = EDGES_RAW.map(e => ({
 
 #### C3. Tooltip 与节点徽章读取 proxy
 
-- [ ] 修改 `js/tooltip.js`：当 hover 节点/边时，从 `node.proxy` / `edge.proxy` 读取 `primary.series` 并查询 `dataLoader` 获取最新值
-- [ ] 修改 `js/nodes.js`：节点徽章右上角显示 proxy 主指标的最新值（格式见 `dataLoader.formatValue()`）
+- [ ] 修改 `js/v2/tooltip.js`：当 hover 节点/边时，从 `node.proxy` / `edge.proxy` 读取 `primary.series` 并查询 `dataLoader` 获取最新值
+- [ ] 修改 `js/v2/nodes.js`：节点徽章右上角显示 proxy 主指标的最新值（格式见 `dataLoader.formatValue()`）
 - [ ] 对 `proxy_status: "not_found"` 的节点，徽章显示灰色 "n/a"
 - [ ] 对 `proxy_status: "external" / "partial"` 的节点，徽章右下角加小图标 ⓘ，hover 显示获取方式说明
 
@@ -1084,7 +1384,7 @@ export const EDGES = EDGES_RAW.map(e => ({
 
 ```javascript
 // 快速自检：所有节点都有 proxy 条目
-import('./js/proxy_registry.js').then(m => {
+import('./js/v2/proxy_registry.js').then(m => {
   console.log('nodes:', Object.keys(m.NODE_PROXIES).length,
               'edges:', Object.keys(m.EDGE_PROXIES).length);
 });
@@ -1098,10 +1398,10 @@ import('./js/proxy_registry.js').then(m => {
 
 ### 4.1 任务清单
 
-- [ ] 修改 `js/constants.js` 的 `EDGES`，新增三条：
+- [ ] 修改 `js/v2/constants.js` 的 `EDGES`，新增三条：
 
 ```javascript
-// js/constants.js — EDGES 新增片段
+// js/v2/constants.js — EDGES 新增片段
 { id: "edge_srf",
   source: "broker_dealers", target: "fed_repo_assets",
   transaction_type: "srf",
@@ -1122,7 +1422,7 @@ import('./js/proxy_registry.js').then(m => {
   style: { color: "#17becf" } },
 ```
 
-- [ ] 在 `js/sidebar.js` 的 Transaction Types 列表中追加这三类，含图例颜色
+- [ ] 在 `js/v2/sidebar.js` 的 Transaction Types 列表中追加这三类，含图例颜色
 
 > **自检建议（非阻塞）**：浏览器中点击 SRF / Discount Window / Foreign RRP 图例项，对应连线应高亮、其他变灰。
 
@@ -1134,10 +1434,10 @@ import('./js/proxy_registry.js').then(m => {
 
 ### 5.1 任务
 
-- [ ] 修改 `js/edges.js`：每条边渲染时，根据 `edge.proxy.price_proxy` 计算"压力分位数"并染色：
+- [ ] 修改 `js/v2/edges.js`：每条边渲染时，根据 `edge.proxy.price_proxy` 计算"压力分位数"并染色：
 
 ```javascript
-// js/edges.js — 新增片段
+// js/v2/edges.js — 新增片段
 function pressureColor(value, history) {
   if (value == null || !history?.length) return "#bbb";
   const sorted = [...history].sort((a, b) => a - b);
@@ -1166,7 +1466,7 @@ function pressureColor(value, history) {
 预留接口：
 
 ```javascript
-// js/sidebar.js 预留 hook
+// js/v2/sidebar.js 预留 hook
 export const PRESSURE_PROBES = [
   "sofr_iorb_spread_bps",
   "effr_iorb_spread_bps",
