@@ -6,7 +6,7 @@
 
 ## 功能特性
 
-- **机构网络全景图**：13 个核心实体节点（美联储、商业银行、货币基金、GSE、对冲基金等），按功能分区布局
+- **机构网络全景图**：28 个实体节点（美联储资产负债表项目、在岸/离岸银行、货币基金、对冲基金等），按功能分区布局
 - **10 种交易类型**：Commercial Paper、Eurodollar、Fed Funds、Repo、FX Swaps、ON RRP 等，以不同颜色/线型区分
 - **时间维度切换**：通过下拉菜单或滑块切换季度（2013 年至今），动态更新各条资金流动关系的数值标注
 - **数据驱动的标注**：边上实时显示利率（如 SOFR、EFFR）、余额（如 Reserve Balances、ON RRP）或交易量
@@ -135,13 +135,80 @@ app.js (入口)
   └── Tooltip
 ```
 
-### 图表布局
+### 图表布局与拓扑结构
 
-- **画布尺寸**：2150 × 1280（SVG viewBox，响应式缩放）
-- **Federal Reserve** 位于图表中心
-- **左侧**：Investor Institutions（Money Market Funds、FCBs/Supras/SWFs）
-- **中间**：Intermediary Institutions（U.S. Banks、FBOs、FHLBs、Broker-Dealers）
-- **右侧**：Borrower / Government（U.S. Treasury、GSEs、Corporates、Hedge Funds、DFMUs）
+**画布尺寸**：2150 × 1280（SVG viewBox，响应式缩放）。整个图表由左右两大面板构成，内部再按层级嵌套多个背景区域（Section），最终放置 28 个实体节点（Node）与约 49 条有向资金流动边（Edge）。
+
+#### 面板层级（Section Tree）
+
+```
+├─ 左侧面板：FEDERAL RESERVE (520×1220, level=1)
+│  └─ BALANCE SHEET (470×1175, level=2)
+│     ├─ Assets 列（左列标注）
+│     └─ Liabilities 列（右列标注）
+│
+└─ 右侧面板：U.S. DOLLAR FUNDING MARKET (1420×1220, level=1)
+   ├─ ONSHORE ENTITIES (940×1175, level=2)
+   │  ├─ Banks and Dealers (905×300, level=3)
+   │  │  └─ [虚线框 dash_banks_pair: 包裹 U.S. Banks + U.S. Branches]
+   │  ├─ Onshore Investors (905×520, level=3)
+   │  │  ├─ [虚线框 dash_mmf_row: 包裹 Gov MMF + Prime MMF]
+   │  │  └─ [虚线框 dash_investor_group: 包裹 Securities Lenders + Corporates + FCBs/SWFs + Hedge Funds]
+   │  └─ U.S. Government Entities (905×230, level=3)
+   │     └─ [虚线框 dash_gse_pair: 包裹 FHLB + GSEs]
+   │
+   └─ OFFSHORE ENTITIES (260×1175, level=2)
+      └─ [虚线框 offshore_investors: 包裹 Foreign Insurers + Foreign Banks + Corporates]
+```
+
+#### 28 个实体节点（按所属区域排列）
+
+| 区域 | 节点 ID | 显示标签 | 形状 |
+|---|---|---|---|
+| **Balance Sheet — Assets** | `bs_treasuries` | U.S. Treasury Securities | bs_parent |
+| | `bs_agency_mbs` | Agency Debt and MBS Securities | bs_parent |
+| | `bs_primary_credit` | Primary Credit Facility | bs_parent |
+| | `bs_cb_swaps` | Central Bank U.S. Dollar Liquidity Swaps | bs_parent |
+| | `bs_foreign_reserves` | Foreign Reserves | bs_parent |
+| | `bs_others_assets` | Others | bs_parent |
+| **Balance Sheet — Liabilities** | `bs_reserve_balances` | Reserve Balances (from depository institutions) | bs_parent |
+| | `bs_fed_notes` | Federal Reserve Notes (currency in circulation) | bs_parent |
+| | `bs_rrp` | Reverse Repurchase Agreements | bs_parent |
+| | └ `bs_rrp_omo` | Open market operations | bs_child |
+| | └ `bs_foreign_repo` | Foreign repo pool | bs_child |
+| | `bs_other_liab` | Other Liabilities | bs_parent |
+| | └ `bs_tga` | U.S. Treasury General Account (TGA) | bs_child |
+| | └ `bs_fhlb_deposits` | FHLB, DFMU, and other deposits | bs_child |
+| **Banks and Dealers** | `us_banks` | U.S. Banks | 六边形 |
+| | `us_fbo` | U.S. Branches of Foreign Banks | 六边形 |
+| | `dealers` | Dealers | 六边形 |
+| **Onshore Investors** | `retail_investors` | Retail Investors | 圆形 |
+| | `gov_mmf` | Government Money Market Funds | 圆形 |
+| | `prime_mmf` | Prime Money Market Funds | 圆形 |
+| | `securities_lenders` | Securities Lenders | 圆形 |
+| | `corporates_onshore` | Corporates | 圆形 |
+| | `fcb_swf_supra_onshore` | FCBs, SWFs, Supras | 圆形 |
+| | `hedge_funds` | Hedge Funds & Other Managers | 圆形 |
+| **U.S. Government Entities** | `fhlb` | Federal Home Loan Banks | 六边形 |
+| | `gse` | Fannie, Freddie, and other GSEs | 六边形 |
+| | `us_treasury` | U.S. Treasury | 矩形 |
+| **Offshore Entities** | `fcb_swf_supra_offshore` | Foreign Central Banks, SWFs, and Supranational Organizations | 圆形 |
+| | `foreign_insurers` | Foreign Insurers & Other Money Managers | 圆形 |
+| | `foreign_banks` | Foreign Banks & Foreign Branches of U.S. Banks | 六边形 |
+| | `corporates_offshore` | Corporates | 圆形 |
+| | `offshore_mmf` | Offshore Money Market Funds | 圆形 |
+
+> **形状语义**：六边形 = 银行/中介类机构；圆形 = 投资者/基金类机构；矩形 = 政府机构；bs_parent/bs_child = 美联储资产负债表项目（父子层级结构）。
+
+#### 边（Edge）连接拓扑
+
+约 **49 条有向边**，按 10 种 Transaction Type 着色，连接模式分为三类：
+
+1. **节点 → 节点**：如 `us_banks ↔ dealers`（Repo，双向）、`fhlb → us_banks`（FHLB Advances）。
+2. **区域 → 节点 / 区域 → 区域**：如 `sec:banks_dealers → bs_reserve_balances`（ Reserve Balances 流入美联储负债端）、`sec:onshore_inv → sec:dash_banks_pair`（存款流入银行体系）。
+3. **自环（Self-loop）**：如 `us_banks → us_banks`、`us_fbo → us_fbo`，表示联邦基金市场内部拆借。
+
+每条边携带 `seriesIds` 字段，关联到 FRED 时间序列，用于在时间切换时动态渲染利率或余额数值。
 
 ---
 
@@ -153,7 +220,7 @@ app.js (入口)
 | [OFR STFM](https://data.financialresearch.gov/) | 金融研究办公室短期融资监测（Repo、MMF 等） | 无需认证 |
 | [NY Fed Markets](https://markets.newyorkfed.org/) | 纽约联储市场数据（EFFR、SOFR、SOMA 持仓等） | 无需认证 |
 
-项目共覆盖约 **43 个 FRED 时间序列**，映射到 10 种 Transaction Type 和 13 个实体节点。
+项目共覆盖约 **43 个 FRED 时间序列**，映射到 10 种 Transaction Type 和 28 个实体节点。
 
 ---
 
