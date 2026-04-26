@@ -346,3 +346,97 @@ FRED_SERIES = {
         "node_ids": ["gov_mmf"],
     },
 }
+
+
+# ── v2 additions (kept SEPARATE from FRED_SERIES) ─────────────────────────
+# Per implementation_plan.md §2.0 "纯追加规则", v1 JSON outputs (which iterate
+# FRED_SERIES) MUST stay byte-equivalent. So new series live in their own dict
+# and are consumed only by v2-specific fetch/export paths.
+#
+# Schema shape mirrors FRED_SERIES (name/units/frequency/transaction_type/
+# node_ids) so build_database.py can reuse the same observations table, plus
+# an extra `group` field for v2 export grouping.
+
+FRED_SERIES_V2 = {
+    # === Fed balance sheet ===
+    "WTREGEN": {
+        "name": "TGA (Weekly, H.4.1)",
+        "units": "Mil. USD",
+        "frequency": "W",
+        "transaction_type": None,
+        "node_ids": ["us_treasury", "federal_reserve"],
+        "group": "fed_bs",
+    },
+    "WLCFOCEL": {
+        "name": "BTFP Outstanding (Other Credit Extensions)",
+        "units": "Mil. USD",
+        "frequency": "W",
+        "transaction_type": None,
+        "node_ids": ["us_banks", "federal_reserve"],
+        "group": "fed_bs",
+    },
+    "H41RESPPALDKNWW": {
+        "name": "Central Bank Liquidity Swaps (H.4.1 Wed)",
+        "units": "Mil. USD",
+        "frequency": "W",
+        "transaction_type": None,
+        "node_ids": ["federal_reserve", "fcb_supra_swf"],
+        "group": "fed_bs",
+    },
+
+    # === Money market rate corridor ===
+    "OBFR": {
+        "name": "Overnight Bank Funding Rate",
+        "units": "Rate (%)",
+        "frequency": "D",
+        "transaction_type": None,
+        "node_ids": ["us_banks", "fbo"],
+        "group": "rates",
+    },
+    # NOTE: TGCR / BGCR are NOT FRED series; they're published only by the
+    # NY Fed Markets API. v2 sources them from `rates/secured/...` if needed.
+
+    # === Commercial paper ===
+    "DCPF1M": {
+        "name": "1-Month Financial Commercial Paper Rate",
+        "units": "Rate (%)",
+        "frequency": "D",
+        "transaction_type": None,
+        "node_ids": ["us_banks", "prime_mmf"],
+        "group": "cp",
+    },
+    "DCPN30": {
+        "name": "1-Month Nonfinancial Commercial Paper Rate",
+        "units": "Rate (%)",
+        "frequency": "D",
+        "transaction_type": None,
+        "node_ids": ["corporates", "prime_mmf"],
+        "group": "cp",
+    },
+
+    # === Banks & T-bill yields ===
+    "TOTBKCR": {
+        "name": "Bank Credit, All Commercial Banks (H.8)",
+        "units": "Bil. USD",
+        "frequency": "W",
+        "transaction_type": None,
+        "node_ids": ["us_banks"],
+        "group": "bank",
+    },
+    "DTB4WK": {
+        "name": "4-Week Treasury Bill: Secondary Market Rate",
+        "units": "Rate (%)",
+        "frequency": "D",
+        "transaction_type": None,
+        "node_ids": ["us_treasury"],
+        "group": "treasury_rates",
+    },
+    "DTB3": {
+        "name": "3-Month Treasury Bill: Secondary Market Rate",
+        "units": "Rate (%)",
+        "frequency": "D",
+        "transaction_type": None,
+        "node_ids": ["us_treasury"],
+        "group": "treasury_rates",
+    },
+}

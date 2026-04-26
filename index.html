@@ -7,24 +7,51 @@
   <link rel="stylesheet" href="css/main.css">
   <link rel="stylesheet" href="css/diagram.css">
   <link rel="stylesheet" href="css/sidebar.css">
+  <link rel="stylesheet" href="css/v2/main.css">
+  <link rel="stylesheet" href="css/v2/diagram.css">
 </head>
 <body>
-  <!-- Header -->
-  <header id="header">
-    <h1><a href="https://www.newyorkfed.org/research/blog/2019_LSE_Markets_Interactive_afonso" target="_blank" rel="noopener noreferrer">Mapping U.S. Dollar Funding Flows</a></h1>
-    <div id="time-selector"></div>
-  </header>
+  <!-- Tab bar (v1 / v2 switcher) -->
+  <div class="tab-bar">
+    <button class="tab-btn active" data-tab="v1">
+      NY Fed Original (2019)
+    </button>
+    <button class="tab-btn" data-tab="v2">
+      Optimized View — Liquidity + Pressure
+      <span class="tab-badge-new">NEW</span>
+    </button>
+  </div>
 
-  <!-- Main layout: diagram (75%) + sidebar (25%) -->
-  <main id="main">
-    <section id="diagram-container"></section>
-    <aside id="sidebar"></aside>
-  </main>
+  <!-- v1 pane: original NY Fed 2019 diagram (UNCHANGED structure) -->
+  <div class="tab-pane active" data-pane="v1">
+    <!-- Header -->
+    <header id="header">
+      <h1><a href="https://www.newyorkfed.org/research/blog/2019_LSE_Markets_Interactive_afonso" target="_blank" rel="noopener noreferrer">Mapping U.S. Dollar Funding Flows</a></h1>
+      <div id="time-selector"></div>
+    </header>
+
+    <!-- Main layout: diagram (75%) + sidebar (25%) -->
+    <main id="main">
+      <section id="diagram-container"></section>
+      <aside id="sidebar"></aside>
+    </main>
+  </div>
+
+  <!-- v2 pane: optimized liquidity + pressure view (placeholder until Module B) -->
+  <div class="tab-pane" data-pane="v2" hidden>
+    <div id="diagram-v2-root">
+      <svg id="diagram-svg-v2" viewBox="0 0 2150 1280"
+           preserveAspectRatio="xMidYMid meet"></svg>
+      <aside id="sidebar-v2"></aside>
+      <div id="time-selector-v2"></div>
+    </div>
+  </div>
 
   <!-- D3.js v7 from CDN -->
   <script src="https://d3js.org/d3.v7.min.js"></script>
 
   <!-- App modules (loaded in dependency order) -->
   <script type="module" src="js/app.js"></script>
+  <script type="module" src="js/tab-router.js"></script>
 </body>
 </html>

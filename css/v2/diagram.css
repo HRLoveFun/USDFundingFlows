@@ -1,0 +1,75 @@
+/* css/v2/diagram.css
+ *
+ * Module C overlay styles: proxy-value badges (additive SVG layer)
+ * and the v2 tooltip (HTML overlay anchored to <body>). All other
+ * node / section / edge styling is inherited from v1's css/diagram.css.
+ */
+
+/* ── Proxy-value badges ─────────────────────────────────────────── */
+.proxy-badge .proxy-badge-bg {
+  fill: #ffffff;
+  stroke: #9aa6b2;
+  stroke-width: 0.75;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.12));
+}
+.proxy-badge .proxy-badge-text {
+  font: 600 11px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  fill: #1f2933;
+}
+.proxy-badge-muted .proxy-badge-bg   { fill: #f1f3f5; stroke: #c5ccd3; }
+.proxy-badge-muted .proxy-badge-text { fill: #8a9099; font-weight: 500; }
+.proxy-badge-info  .proxy-badge-bg   { fill: #fff8e1; stroke: #e0a800; }
+.proxy-badge-info  .proxy-badge-text { fill: #8a6100; }
+.proxy-badge-value .proxy-badge-bg   { fill: #ffffff; stroke: #5c6bc0; }
+.proxy-badge-value .proxy-badge-text { fill: #1f2933; }
+
+/* ── v2 tooltip (independent from v1 .tooltip) ─────────────────── */
+.tooltip-v2 {
+  position: fixed;
+  z-index: 1000;
+  max-width: 360px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.98);
+  border: 1px solid #d0d4d8;
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  font: 12px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #1f2933;
+  pointer-events: none;
+}
+.tooltip-v2.hidden { display: none; }
+.tooltip-v2 .tt-title {
+  font-weight: 700;
+  font-size: 13px;
+  margin-bottom: 6px;
+  color: #0f1419;
+}
+.tooltip-v2 .tt-row { margin: 2px 0; }
+.tooltip-v2 .tt-label {
+  display: inline-block;
+  min-width: 60px;
+  color: #5e6770;
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+}
+.tooltip-v2 code {
+  background: #f1f3f5;
+  border-radius: 3px;
+  padding: 1px 4px;
+  font-size: 11px;
+}
+.tooltip-v2 .tt-date     { color: #8a9099; font-size: 10px; }
+.tooltip-v2 .tt-note     { color: #8a9099; font-style: italic; }
+.tooltip-v2 .tt-rationale {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed #e0e4e8;
+  color: #4a5560;
+  font-size: 11px;
+}
+.tooltip-v2 .tt-muted              { color: #8a9099; }
+.tooltip-v2 .tt-status             { margin-top: 6px; font-size: 11px; font-weight: 600; }
+.tooltip-v2 .tt-status-partial     { color: #b07d00; }
+.tooltip-v2 .tt-status-external    { color: #b04500; }
+.tooltip-v2 .tt-status-not_found   { color: #888c92; }

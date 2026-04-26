@@ -1,0 +1,153 @@
+/**
+ * v2/tooltip.js — proxy-aware tooltip for the v2 diagram.
+ *
+ * Module C deliverable: hovering a v2 node / edge surfaces its proxy
+ * record from `proxy_registry.js` and the latest value from the shared
+ * data loader (when the proxy series exists in time_series.json).
+ *
+ * Sources outside FRED (Treasury / NYFed / OFR / External) are shown
+ * with their source label only; live value loading for those will be
+ * wired by a follow-up pass once the v2 data layer is unified.
+ *
+ * Implementation notes:
+ *   - Singleton DOM node `<div class="tooltip-v2 hidden">` appended to
+ *     `<body>` on first init — independent from v1's tooltip.
+ *   - `showNodeProxy` / `showEdgeProxy` accept a `dataLoader` so the
+ *     tooltip can look up the latest series value lazily.
+ */
+
+let tooltipEl = null;
+
+const STATUS_LABEL = {
+  ok:        "",
+  partial:   "partial — manual download required",
+  external:  "external — out-of-band data source",
+  not_found: "no public proxy",
+};
+
+/** Initialise the singleton tooltip element (idempotent). */
+export function initTooltip() {
+  if (tooltipEl) return tooltipEl;
+  tooltipEl = document.createElement("div");
+  tooltipEl.className = "tooltip-v2 hidden";
+  document.body.appendChild(tooltipEl);
+  return tooltipEl;
+}
+
+/** Hide the tooltip. */
+export function hideTooltip() {
+  if (!tooltipEl) return;
+  tooltipEl.classList.add("hidden");
+}
+
+function positionTooltip(event) {
+  if (!tooltipEl) return;
+  const pad = 12;
+  const { clientX: x, clientY: y } = event;
+  const rect = tooltipEl.getBoundingClientRect();
+  let left = x + pad;
+  let top  = y + pad;
+  if (left + rect.width  > window.innerWidth)  left = x - rect.width  - pad;
+  if (top  + rect.height > window.innerHeight) top  = y - rect.height - pad;
+  tooltipEl.style.left = `${Math.max(8, left)}px`;
+  tooltipEl.style.top  = `${Math.max(8, top)}px`;
+}
+
+function escape(text) {
+  return String(text)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function latestSeriesValue(dataLoader, seriesId) {
+  if (!dataLoader || !seriesId) return null;
+  const dates = dataLoader.dates ?? [];
+  const ts    = dataLoader.timeSeries ?? {};
+  for (let i = dates.length - 1; i >= 0; i--) {
+    const row = ts[dates[i]];
+    if (row && row[seriesId] != null) {
+      return { date: dates[i], value: row[seriesId] };
+    }
+  }
+  return null;
+}
+
+function renderProxyLine(label, p, dataLoader) {
+  if (!p) return "";
+  const note = p.note ? ` <span class="tt-note">(${escape(p.note)})</span>` : "";
+  let valueHtml = "";
+  if (p.source === "FRED" && dataLoader) {
+    const hit = latestSeriesValue(dataLoader, p.series);
+    if (hit) {
+      const meta  = dataLoader.metadata?.[p.series] ?? {};
+      const units = meta.units ?? "";
+      const fv    = dataLoader.formatValue?.(hit.value, units) ?? hit.value;
+      valueHtml = ` → <strong>${escape(fv)}</strong> <span class="tt-date">(${hit.date})</span>`;
+    }
+  }
+  return `<div class="tt-row"><span class="tt-label">${label}:</span> ${escape(p.source)} · <code>${escape(p.series ?? "")}</code>${
+    p.metric ? ` · <em>${escape(p.metric)}</em>` : ""
+  }${valueHtml}${note}</div>`;
+}
+
+function renderStatus(proxy_status) {
+  if (!proxy_status || proxy_status === "ok") return "";
+  return `<div class="tt-status tt-status-${proxy_status}">⚠ ${escape(STATUS_LABEL[proxy_status] ?? proxy_status)}</div>`;
+}
+
+/**
+ * @param {object} node            v1 NODE record (we look up proxy by id)
+ * @param {Event}  event           pointer event
+ * @param {object} dataLoader      v1 DataLoader instance (optional)
+ * @param {object} [proxyRegistry] NODE_PROXIES map (overrides node.proxy)
+ */
+export function showNodeProxy(node, event, dataLoader, proxyRegistry) {
+  const el = initTooltip();
+  const proxy = proxyRegistry?.[node.id] ?? node.proxy ?? null;
+  const title = `<div class="tt-title">${escape(node.label?.replace(/\n/g, " ") ?? node.id)}</div>`;
+  if (!proxy) {
+    el.innerHTML = title + `<div class="tt-row tt-muted">no proxy registered</div>`;
+  } else {
+    el.innerHTML =
+      title +
+      renderProxyLine("primary",   proxy.primary,   dataLoader) +
+      renderProxyLine("secondary", proxy.secondary, dataLoader) +
+      (proxy.rationale ? `<div class="tt-rationale">${escape(proxy.rationale)}</div>` : "") +
+      renderStatus(proxy.proxy_status);
+  }
+  el.classList.remove("hidden");
+  positionTooltip(event);
+}
+
+/**
+ * @param {object} edge            v2 EDGE record
+ * @param {Event}  event           pointer event
+ * @param {object} dataLoader      v1 DataLoader instance (optional)
+ * @param {object} [proxyRegistry] EDGE_PROXIES map (overrides edge.proxy)
+ */
+export function showEdgeProxy(edge, event, dataLoader, proxyRegistry) {
+  const el = initTooltip();
+  const proxy = proxyRegistry?.[edge.transaction_type] ?? edge.proxy ?? null;
+  const title = `<div class="tt-title">${escape(edge.label ?? edge.transaction_type ?? edge.id ?? "edge")}</div>`;
+  if (!proxy) {
+    el.innerHTML = title + `<div class="tt-row tt-muted">no proxy registered</div>`;
+  } else {
+    el.innerHTML =
+      title +
+      renderProxyLine("volume", proxy.volume_proxy, dataLoader) +
+      renderProxyLine("price",  proxy.price_proxy,  dataLoader) +
+      (proxy.counterparties_proxy
+        ? renderProxyLine("counterparties", proxy.counterparties_proxy, dataLoader)
+        : "") +
+      (proxy.rationale ? `<div class="tt-rationale">${escape(proxy.rationale)}</div>` : "") +
+      (proxy.fallback  ? `<div class="tt-rationale tt-muted">fallback: ${escape(proxy.fallback)}</div>` : "") +
+      renderStatus(proxy.proxy_status);
+  }
+  el.classList.remove("hidden");
+  positionTooltip(event);
+}
+
+// Backwards-compat aliases (placeholder names from the S2 stub)
+export const showNodeTooltip = showNodeProxy;
+export const showEdgeTooltip = showEdgeProxy;

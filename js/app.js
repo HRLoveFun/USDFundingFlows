@@ -49,3 +49,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     onTypeSelect: (typeId) => highlightTransactionType(typeId),
   });
 });
+
+// Expose the data loader so v2 (lazy-loaded) can reuse the same instance
+// instead of fetching JSON twice. This is the only allowed v1 modification.
+window.__v1DataLoader = loader;

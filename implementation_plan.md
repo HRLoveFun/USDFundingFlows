@@ -38,6 +38,26 @@
 - 数据层 **纯追加**：原 `data/json/*.json` 文件输出口径不变；新数据写入新文件
 - v1 渲染路径任何回归（节点位置、边样式、tooltip 文案变化）都视为 release blocker
 
+### 0.1.2 ⚠️ v2 视觉基线 = v1（必须）
+
+> 实施过程中发现：B 阶段把 plan 中给的"草案坐标"当作权威，结果 v2 渲染出与 v1 完全不同的节点集，是错误的。本节做明确约束。
+
+- **v2 默认视觉等价 v1**：v2 Tab 第一次完成（即 Module B 验收）时，v2 SVG 中的面板/分组/节点的**数量、位置、形状、文字、颜色必须与 v1 完全一致**——只是缺少边、缺少侧边栏、缺少时间选择器
+- **数据复用**：`js/v2/constants.js` 用 `import { NODES } from "../constants.js"` 直接 re-export v1 的 NODES；`js/v2/layout/panels.js` 同理 re-export v1 的 SECTIONS / ANNOTATIONS。**不允许** v2 自己写一套坐标
+- **渲染复用**：v2 的 `renderSections` / `renderNodes` 在 S2 阶段直接调用 v1 的同名函数（薄壳转发）。后续模块要替换某个节点的视觉时，**fork 这个 wrapper**，**不修改 v1 的实现**
+- **增量原则**：要"加 SRF / Discount Window / Foreign RRP Pool" 这类 v2 独有的节点/边，由 Module C（追加节点）/ Module E（追加边）完成；它们 push 到 NODES 副本而不是 v1 原数组
+- **plan §3.2 中 B2 的"节点坐标草案"是历史笔记，不再是权威**——以本节约束为准
+
+### 0.1.3 ⚠️ S2 阶段不渲染任何边
+
+> 历史 plan 把"路由工具"和"边渲染"放在同一阶段（B4/B5），易混淆。本节明确切分。
+
+- **S2（Module B）只渲染**：面板（panels）、分组（sections / dashed groups）、节点（nodes）
+- **S2 不渲染**：连线（edges）、端点（ports）、proxy 徽章、价差通道、压力指示器
+- `js/v2/constants.js` 的 `EDGES` 在 S2 阶段保持 `[]`；`js/v2/layout/routing.js` 仅作为**路由工具函数**（`routeManhattan` / `routeBezier` / `pickRouter` / `applyBundleOffset`）输出，不被任何活动调用点触发
+- 端点选择（port selection）属于 `edge_routing_interface_design.md` 的 `endpoint-selector` 范畴，由 Module C 落地
+- 边的 path 数据由 Module C（绑定 proxy）+ Module E（新连线）共同填充 `EDGES`，再由 v2 的 `renderEdges` 调用 routing 工具绘制
+
 ### 0.2 并行工作流总览
 
 ```
@@ -126,7 +146,7 @@ js/
 
 #### 0.1 `index.html` 注入 Tab 容器
 
-- [ ] 在现有 SVG 容器外层包裹 Tab 结构。**只追加，不删除既有节点**：
+- [x] 在现有 SVG 容器外层包裹 Tab 结构。**只追加，不删除既有节点**：
 
 ```html
 <!-- index.html — 在 <body> 内，原 #diagram 容器之前插入 -->
@@ -164,7 +184,7 @@ js/
 
 #### 0.2 Tab 切换逻辑
 
-- [ ] 新建 `js/tab-router.js`：
+- [x] 新建 `js/tab-router.js`：
 
 ```javascript
 // js/tab-router.js
@@ -212,7 +232,7 @@ if (document.readyState === "loading") {
 
 #### 0.3 `js/v2/app.js` 入口骨架
 
-- [ ] 新建 `js/v2/app.js`，先打通"空 SVG 能加载"：
+- [x] 新建 `js/v2/app.js`，先打通"空 SVG 能加载"：
 
 ```javascript
 // js/v2/app.js
@@ -237,7 +257,7 @@ export async function initV2() {
 }
 ```
 
-- [ ] 在 `js/app.js`（**v1 入口，仅追加一行**）末尾暴露 dataLoader：
+- [x] 在 `js/app.js`（**v1 入口，仅追加一行**）末尾暴露 dataLoader：
 
 ```javascript
 // js/app.js — 末尾追加（不修改任何既有逻辑）
@@ -250,15 +270,15 @@ window.__v1DataLoader = dataLoader;
 
 为了让 Module 0 自检通过，先建空壳，让 Module B-E 后续填充：
 
-- [ ] `js/v2/diagram.js`：导出 `initDiagram(svg, dataLoader)`，内部仅画一个 placeholder 矩形 + 文字 "v2 渲染就绪，等待 Module B 注入布局"
-- [ ] `js/v2/config.js`：先空导出 `export const CONFIG = {}`
-- [ ] `js/v2/constants.js`：先空导出 `export const NODES = []; export const EDGES = [];`
-- [ ] `js/v2/nodes.js` / `edges.js` / `tooltip.js` / `sidebar.js`：均空模块，预留导出函数签名
+- [x] `js/v2/diagram.js`：导出 `initDiagram(svg, dataLoader)`，内部仅画一个 placeholder 矩形 + 文字 "v2 渲染就绪，等待 Module B 注入布局"
+- [x] `js/v2/config.js`：先空导出 `export const CONFIG = {}`
+- [x] `js/v2/constants.js`：先空导出 `export const NODES = []; export const EDGES = [];`
+- [x] `js/v2/nodes.js` / `edges.js` / `tooltip.js` / `sidebar.js`：均空模块，预留导出函数签名
 
 #### 0.5 Tab 样式
 
-- [ ] 新建 `css/v2/main.css` 入口（暂时为空）
-- [ ] 在 **`css/main.css`** 追加（这是 v1 文件唯一允许的改动，仅加 Tab UI，不改既有 class）：
+- [x] 新建 `css/v2/main.css` 入口（暂时为空）
+- [x] 在 **`css/main.css`** 追加（这是 v1 文件唯一允许的改动，仅加 Tab UI，不改既有 class）：
 
 ```css
 /* css/main.css 追加 —— Tab 样式（仅追加，不改既有规则） */
@@ -302,7 +322,7 @@ window.__v1DataLoader = dataLoader;
 .tab-pane.active { display: block; }
 ```
 
-- [ ] 在 `index.html` 的 `<head>` 中追加 `<link rel="stylesheet" href="css/v2/main.css">`
+- [x] 在 `index.html` 的 `<head>` 中追加 `<link rel="stylesheet" href="css/v2/main.css">`
 
 ### 1.0.4 ⭐ Module 0 验收（强制）
 
@@ -372,7 +392,7 @@ data/
 
 #### A1. 扩充 FRED 系列配置
 
-- [ ] 修改 `data/series_config.py`，按下列分组新增字段：
+- [x] 修改 `data/series_config.py`，按下列分组新增字段：
 
 ```python
 # data/series_config.py — 新增片段（追加到既有 FRED_SERIES）
@@ -409,12 +429,12 @@ FRED_SERIES_NEW = {
 FRED_SERIES.update(FRED_SERIES_NEW)
 ```
 
-- [ ] 在文件头部加入 `group` 字段说明，方便 `export_json.py` 按组导出
-- [ ] 跑 `python3 fetch_fred_data.py --series-only WRESBAL,SOFR,IORB` 验证新增系列可拉取
+- [x] 在文件头部加入 `group` 字段说明，方便 `export_json.py` 按组导出
+- [x] 跑 `python3 fetch_fred_data.py --series-only WRESBAL,SOFR,IORB` 验证新增系列可拉取
 
 #### A2. Treasury Fiscal Data 拉取脚本
 
-- [ ] 新建 `data/treasury_config.py`：
+- [x] 新建 `data/treasury_config.py`：
 
 ```python
 # data/treasury_config.py
@@ -446,7 +466,7 @@ TREASURY_ENDPOINTS = {
 }
 ```
 
-- [ ] 新建 `data/fetch_treasury_data.py`：
+- [x] 新建 `data/fetch_treasury_data.py`：
 
 ```python
 # data/fetch_treasury_data.py
@@ -506,11 +526,11 @@ if __name__ == "__main__":
     main()
 ```
 
-- [ ] 验收：`python3 data/fetch_treasury_data.py` 执行成功，`data/raw/treasury/tga_daily.json` 有 ≥ 3000 行（约 13 年日数据）
+- [x] 验收：`python3 data/fetch_treasury_data.py` 执行成功，`data/raw/treasury/tga_daily.json` 有 ≥ 3000 行（约 13 年日数据）
 
 #### A3. NY Fed Markets API 拉取脚本
 
-- [ ] 新建 `data/nyfed_config.py`：
+- [x] 新建 `data/nyfed_config.py`：
 
 ```python
 # data/nyfed_config.py
@@ -557,7 +577,7 @@ NYFED_ENDPOINTS = {
 }
 ```
 
-- [ ] 新建 `data/fetch_nyfed_data.py`：
+- [x] 新建 `data/fetch_nyfed_data.py`：
 
 ```python
 # data/fetch_nyfed_data.py
@@ -609,11 +629,11 @@ if __name__ == "__main__":
 
 > ⚠️ NY Fed API 端点的响应结构在不同 endpoint 略有差异。第一次跑完先 `head -c 1000 data/raw/nyfed/sofr.json` 检查实际字段名，必要时调整 `fields_keep`。
 
-- [ ] 验收：`data/raw/nyfed/sofr.json` 至少包含 `percentPercentile99` 字段
+- [x] 验收：`data/raw/nyfed/sofr.json` 至少包含 `percentPercentile99` 字段
 
 #### A4. 数据库 schema 扩展
 
-- [ ] 修改 `data/build_database.py`，新增三张表：
+- [x] 修改 `data/build_database.py`，新增三张表：
 
 ```sql
 -- 在 build_database.py 的 schema 初始化部分追加
@@ -641,8 +661,8 @@ CREATE TABLE IF NOT EXISTS derived_indicators (
 );
 ```
 
-- [ ] 增加加载函数 `load_treasury()` 与 `load_nyfed()`，从 `raw/` 目录读取 JSON 写入 SQLite
-- [ ] 增加派生指标计算：
+- [x] 增加加载函数 `load_treasury()` 与 `load_nyfed()`，从 `raw/` 目录读取 JSON 写入 SQLite
+- [x] 增加派生指标计算：
 
 ```python
 # build_database.py
@@ -690,13 +710,13 @@ def compute_derived_indicators(conn):
 
 #### A5. JSON 导出扩展
 
-- [ ] 修改 `data/export_json.py`，新增四个导出函数：
+- [x] 修改 `data/export_json.py`，新增四个导出函数：
   - `export_fed_balance_sheet()` → `fed_balance_sheet.json`
   - `export_treasury_flows()` → `treasury_flows.json`
   - `export_nyfed_operations()` → `nyfed_operations.json`
   - `export_pressure_indicators()` → `pressure_indicators.json`
 
-- [ ] **关键**：原 `time_series.json`、`available_dates.json` 等 v1 文件**输出不变**——v2 新数据全部走新增 export 函数
+- [x] **关键**：原 `time_series.json`、`available_dates.json` 等 v1 文件**输出不变**——v2 新数据全部走新增 export 函数
 
 ### 2.4 验收（Module A，强制）
 
@@ -755,6 +775,7 @@ for f in v2_files:
 ## 3. Module B — 双面板布局重构（与 A 完全并行）
 
 > **路径约定**：所有产物在 `js/v2/` 与 `css/v2/`。**不修改任何 v1 文件**。
+> **范围约束**：见 §0.1.2（v2 视觉等价 v1）与 §0.1.3（S2 不渲染边）。
 > **关键参考**：用户提供的面板层级（Section Tree）
 
 ```
@@ -777,360 +798,125 @@ for f in v2_files:
       └─ [虚线 offshore_investors: Foreign Insurers + Foreign Banks + Corporates]
 ```
 
-### 2.1 输出文件
+> ✅ **此层级与 v1 `js/constants.js` 中的 `SECTIONS` 数组结构相同**——v2 的层级数据**直接 re-export v1 SECTIONS**，不要在 v2 里重写一份。
+
+### 3.1 输出文件
 
 ```
 js/v2/
 ├── layout/                    # 新建子目录
-│   ├── panels.js              # 面板层级数据 + 渲染
-│   ├── grid.js                # 行/列布局工具
-│   ├── routing.js             # Manhattan 路由 + 边束捆绑
-│   └── collision.js           # 标签防重叠（forceCollide 包装）
-├── constants.js               # 填充（Module 0 留的空壳）：节点坐标按面板层级
-├── diagram.js                 # 填充：渲染顺序加入面板层
-├── nodes.js                   # 填充：节点尺寸适配新分组
-└── edges.js                   # 填充：使用 routing.js 路由
+│   ├── panels.js              # re-export v1 SECTIONS / ANNOTATIONS（薄壳）
+│   └── routing.js             # 路由工具函数（S2 阶段仅工具，不被调用）
+├── constants.js               # 填充：re-export v1 NODES；EDGES = []
+├── diagram.js                 # 填充：调用 v1 renderSections + v1 defineMarkers + v2 renderNodes
+├── nodes.js                   # 填充：薄壳，转发到 v1 renderNodes
+└── edges.js                   # 填充：renderEdges 函数（S2 阶段 EDGES=[] → 实际不绘制）
 css/v2/
-└── diagram.css                # 新建：面板/虚线分组样式（独立于 v1 diagram.css）
+└── diagram.css                # 新建：保持空（S2 仅继承 v1 的 css/diagram.css）
 ```
 
 > ⚠️ **不修改任何 v1 文件**。Module 0 已建立 `js/v2/*.js` 空壳，本模块只是填充内容。
+> ⚠️ **v1 文件可以 read-only `import`**——这不属于"修改 v1"。Plan 中"v1 不动"的约束指的是不能编辑 v1 源代码本身。
 
 ### 3.2 任务清单
 
-#### B1. 面板层级数据结构
+#### B1. v2 数据层 = v1 re-export
 
-- [ ] 新建 `js/v2/layout/panels.js`：
+- [x] `js/v2/constants.js`：
 
 ```javascript
-// js/v2/layout/panels.js
-// 面板与分组层级（与 SVG viewBox 2150×1280 对齐）
-export const PANELS = {
-  fed: {
-    id: "panel_fed",
-    label: "FEDERAL RESERVE",
-    level: 1,
-    x: 20, y: 30, width: 520, height: 1220,
-    children: [{
-      id: "fed_balance_sheet",
-      label: "BALANCE SHEET",
-      level: 2,
-      x: 45, y: 75, width: 470, height: 1175,
-      columns: [
-        { id: "fed_assets",      label: "Assets",      x: 50,  width: 210 },
-        { id: "fed_liabilities", label: "Liabilities", x: 280, width: 210 },
-      ],
-    }],
-  },
-  market: {
-    id: "panel_market",
-    label: "U.S. DOLLAR FUNDING MARKET",
-    level: 1,
-    x: 560, y: 30, width: 1420, height: 1220,
-    children: [
-      {
-        id: "onshore",
-        label: "ONSHORE ENTITIES",
-        level: 2,
-        x: 580, y: 75, width: 940, height: 1175,
-        children: [
-          { id: "banks_dealers",  label: "Banks and Dealers",      level: 3,
-            x: 600, y: 105, width: 905, height: 300 },
-          { id: "onshore_invest", label: "Onshore Investors",       level: 3,
-            x: 600, y: 415, width: 905, height: 520 },
-          { id: "us_gov",         label: "U.S. Government Entities",level: 3,
-            x: 600, y: 945, width: 905, height: 230 },
-        ],
-      },
-      {
-        id: "offshore",
-        label: "OFFSHORE ENTITIES",
-        level: 2,
-        x: 1540, y: 75, width: 260, height: 1175,
-      },
-    ],
-  },
-};
-
-// 虚线分组（dashed group）—— 包裹相邻节点，视觉聚合
-export const DASH_GROUPS = [
-  { id: "dash_banks_pair",   parent: "banks_dealers",
-    members: ["us_banks", "us_branches"],
-    label: null /* 不显文字标签，仅边框 */ },
-  { id: "dash_mmf_row",      parent: "onshore_invest",
-    members: ["gov_mmf", "prime_mmf"], label: "Money Market Funds" },
-  { id: "dash_investor_group", parent: "onshore_invest",
-    members: ["sec_lenders", "corporates", "fcb_swf", "hedge_funds"],
-    label: null },
-  { id: "dash_gse_pair",     parent: "us_gov",
-    members: ["fhlb", "gses"], label: null },
-  { id: "offshore_investors", parent: "offshore",
-    members: ["foreign_insurers", "foreign_banks", "offshore_corporates"],
-    label: "Offshore Investors" },
-];
+import { NODES as V1_NODES } from "../constants.js";
+export const NODES = V1_NODES;
+export const EDGES = [];   // S2 阶段必须为空，由 Module C/E 填充
 ```
 
-#### B2. 节点坐标重映射
-
-- [ ] 修改 `js/v2/constants.js`，按 panels.js 的容器位置重新指定每个节点的 `(x, y)`：
+- [x] `js/v2/layout/panels.js`：
 
 ```javascript
-// js/v2/constants.js — 节点坐标片段（替换原 NODES 数组）
-export const NODES = [
-  // === Fed Balance Sheet 列 ===
-  { id: "fed_assets_label",      label: "Assets",      panel: "fed_assets",
-    x: 155, y: 110, width: 200, height: 0, type: "header" },
-  { id: "fed_securities",        label: "Securities Held Outright", panel: "fed_assets",
-    x: 155, y: 200, width: 200, height: 60 },
-  { id: "fed_repo_assets",       label: "Repos / SRF",   panel: "fed_assets",
-    x: 155, y: 280, width: 200, height: 60 },
-  { id: "fed_lending",           label: "Discount Window", panel: "fed_assets",
-    x: 155, y: 360, width: 200, height: 60 },
-  { id: "fed_swaplines",         label: "FX Swap Lines", panel: "fed_assets",
-    x: 155, y: 440, width: 200, height: 60 },
-
-  { id: "fed_liab_label",        label: "Liabilities", panel: "fed_liabilities",
-    x: 385, y: 110, width: 200, height: 0, type: "header" },
-  { id: "fed_currency",          label: "Currency in Circ.", panel: "fed_liabilities",
-    x: 385, y: 200, width: 200, height: 60 },
-  { id: "fed_reserves",          label: "Reserve Balances", panel: "fed_liabilities",
-    x: 385, y: 280, width: 200, height: 60 },
-  { id: "fed_rrp_liab",          label: "ON RRP",           panel: "fed_liabilities",
-    x: 385, y: 360, width: 200, height: 60 },
-  { id: "fed_tga",               label: "TGA",              panel: "fed_liabilities",
-    x: 385, y: 440, width: 200, height: 60 },
-
-  // === Banks and Dealers ===
-  { id: "us_banks",              label: "U.S. Banks",      panel: "banks_dealers",
-    x: 700, y: 200, width: 180, height: 80 },
-  { id: "us_branches",           label: "U.S. Branches (FBO)", panel: "banks_dealers",
-    x: 920, y: 200, width: 180, height: 80 },
-  { id: "broker_dealers",        label: "Broker-Dealers",  panel: "banks_dealers",
-    x: 1180, y: 200, width: 180, height: 80 },
-  { id: "fhlb_advances",         label: "FHLB (advances)", panel: "banks_dealers",
-    x: 1380, y: 200, width: 130, height: 80 },
-
-  // === Onshore Investors ===
-  { id: "gov_mmf",               label: "Govt MMF",  panel: "onshore_invest",
-    x: 700, y: 480, width: 180, height: 75 },
-  { id: "prime_mmf",             label: "Prime MMF", panel: "onshore_invest",
-    x: 920, y: 480, width: 180, height: 75 },
-  { id: "sec_lenders",           label: "Securities Lenders", panel: "onshore_invest",
-    x: 700, y: 620, width: 180, height: 75 },
-  { id: "corporates",            label: "Corporates",         panel: "onshore_invest",
-    x: 920, y: 620, width: 180, height: 75 },
-  { id: "fcb_swf",               label: "FCBs / Supras / SWFs", panel: "onshore_invest",
-    x: 1140, y: 620, width: 180, height: 75 },
-  { id: "hedge_funds",           label: "Hedge Funds",        panel: "onshore_invest",
-    x: 1360, y: 620, width: 140, height: 75 },
-  { id: "dfmu",                  label: "DFMUs / FICC",       panel: "onshore_invest",
-    x: 1140, y: 800, width: 180, height: 75 },
-
-  // === U.S. Government ===
-  { id: "treasury",              label: "U.S. Treasury",      panel: "us_gov",
-    x: 700, y: 1020, width: 180, height: 75 },
-  { id: "fhlb",                  label: "FHLB",               panel: "us_gov",
-    x: 920, y: 1020, width: 180, height: 75 },
-  { id: "gses",                  label: "GSEs",               panel: "us_gov",
-    x: 1100, y: 1020, width: 180, height: 75 },
-
-  // === Offshore ===
-  { id: "foreign_insurers",      label: "Foreign Insurers",   panel: "offshore",
-    x: 1620, y: 200, width: 160, height: 70 },
-  { id: "foreign_banks",         label: "Foreign Banks",      panel: "offshore",
-    x: 1620, y: 480, width: 160, height: 70 },
-  { id: "offshore_corporates",   label: "Offshore Corporates", panel: "offshore",
-    x: 1620, y: 760, width: 160, height: 70 },
-];
+import { SECTIONS, ANNOTATIONS } from "../../constants.js";
+export const PANELS = SECTIONS;
+export { ANNOTATIONS };
+export const DASH_GROUPS = SECTIONS.filter(s => s.style === "dashed_gray");
 ```
 
-> 上述坐标为初稿，最终需根据浏览器实际渲染**手动微调** ±20px。建议做完 B3 后用 Chrome DevTools 截图核对。
+> ❌ **不要**根据本文档 §3 顶部 ASCII 树自己重写一套 PANELS 字典。v1 的 SECTIONS 数组是唯一权威。
 
-#### B3. 面板渲染层
+#### B2. v2 渲染 = 调用 v1 渲染器
 
-- [ ] 在 `js/v2/diagram.js` 的初始化阶段插入面板绘制（**在节点和边之前渲染**，作为最底层）：
+- [x] `js/v2/diagram.js`：
 
 ```javascript
-// js/v2/diagram.js — 新增片段
-import { PANELS, DASH_GROUPS } from "./layout/panels.js";
+import { renderSections } from "../nodes.js";   // v1 read-only
+import { defineMarkers }  from "../edges.js";   // v1 read-only
+import { renderNodes }    from "./nodes.js";    // v2 wrapper
+import { renderEdges }    from "./edges.js";    // v2 wrapper
+import { NODES, EDGES }   from "./constants.js";
 
-function renderPanels(svg) {
-  const panelLayer = svg.append("g").attr("class", "layer-panels");
+export function initDiagram(svgEl, _dataLoader) {
+  const sel = window.d3.select(svgEl);
+  sel.selectAll("*").remove();
+  const root         = sel.append("g").attr("class", "v2-root");
+  const defs         = root.append("defs");
+  const sectionLayer = root.append("g").attr("class", "section-layer");
+  const edgeLayer    = root.append("g").attr("class", "edge-layer");
+  const nodeLayer    = root.append("g").attr("class", "node-layer");
 
-  function drawPanel(g, p) {
-    g.append("rect")
-      .attr("class", `panel panel-l${p.level}`)
-      .attr("x", p.x).attr("y", p.y)
-      .attr("width", p.width).attr("height", p.height)
-      .attr("rx", 6);
-    if (p.label) {
-      g.append("text")
-        .attr("class", `panel-label panel-label-l${p.level}`)
-        .attr("x", p.x + 14).attr("y", p.y + 22)
-        .text(p.label);
-    }
-    (p.children || []).forEach(c => drawPanel(g, c));
-  }
-
-  Object.values(PANELS).forEach(p => drawPanel(panelLayer, p));
+  defineMarkers(defs);
+  renderSections(sectionLayer);
+  renderEdges(edgeLayer.node(), EDGES, NODES);  // EDGES=[] → no-op in S2
+  renderNodes(nodeLayer);
 }
+```
 
-function renderDashGroups(svg, nodes) {
-  const dashLayer = svg.append("g").attr("class", "layer-dash-groups");
-  const idx = Object.fromEntries(nodes.map(n => [n.id, n]));
+- [x] `js/v2/nodes.js`：
 
-  DASH_GROUPS.forEach(g => {
-    const members = g.members.map(id => idx[id]).filter(Boolean);
-    if (!members.length) return;
-    const xs = members.map(m => m.x);
-    const ys = members.map(m => m.y);
-    const xe = members.map(m => m.x + m.width);
-    const ye = members.map(m => m.y + m.height);
-    const pad = 12;
-    const x = Math.min(...xs) - pad;
-    const y = Math.min(...ys) - pad;
-    const w = Math.max(...xe) - x + pad;
-    const h = Math.max(...ye) - y + pad;
-
-    const grp = dashLayer.append("g").attr("class", "dash-group");
-    grp.append("rect")
-      .attr("class", "dash-frame")
-      .attr("x", x).attr("y", y).attr("width", w).attr("height", h)
-      .attr("rx", 4);
-    if (g.label) {
-      grp.append("text")
-        .attr("class", "dash-label")
-        .attr("x", x + 8).attr("y", y - 4)
-        .text(g.label);
-    }
+```javascript
+import { renderNodes as renderV1Nodes } from "../nodes.js";
+export function renderNodes(layer, opts = {}) {
+  return renderV1Nodes(layer, {
+    onNodeHover: opts.onNodeHover ?? (() => {}),
+    onNodeOut:   opts.onNodeOut   ?? (() => {}),
   });
 }
-
-// 在 init() 中 SVG 创建后立即调用
-// renderPanels(svg);  renderDashGroups(svg, NODES);
 ```
 
-#### B4. Manhattan 路由
+- [x] `index.html`：v2 `<svg id="diagram-svg-v2">` 的 `viewBox` 与 v1 画布一致：`viewBox="0 0 2150 1280"`
 
-- [ ] 新建 `js/v2/layout/routing.js`：
+#### B3. 路由工具（S2 仅写函数，不调用）
 
-```javascript
-// js/v2/layout/routing.js
-// 三段式 Manhattan 路由：源点→水平→垂直→目标点
-// 通过"通道列"（gutter）走线，避免穿越节点矩形
-import { PANELS } from "./panels.js";
+- [x] `js/v2/layout/routing.js`：导出 `routeManhattan(s, t, opts)` / `routeBezier(s, t, opts)` / `pickRouter(s, t)` / `applyBundleOffset(edges)` 四个**纯函数**
+- [x] **S2 阶段不在 v2/edges.js 真正使用这些函数**——`EDGES=[]` 时 renderEdges 直接 return；存在的代码路径仅供 Module C/E 接管时使用
 
-const GUTTERS = {
-  fed_market: 552,        // Fed 与 Market 之间的垂直通道
-  banks_to_invest: 405,   // banks 区与 onshore_invest 区之间水平通道
-  invest_to_gov: 935,     // onshore_invest 与 us_gov 间通道
-  onshore_to_offshore: 1525,
-};
+> ⚠️ **plan 旧版 B4/B5 的"边路由 + 边束捆绑"**已被剥离到 Module C/D/E。S2 验收**不**检查"边不穿节点 / 跨面板贝塞尔"——因为 S2 没有边。
 
-export function routeManhattan(source, target, opts = {}) {
-  const sx = source.x + source.width;
-  const sy = source.y + source.height / 2;
-  const tx = target.x;
-  const ty = target.y + target.height / 2;
-  const gutter = opts.gutter ?? (sx + tx) / 2;
+#### B4. CSS 处理
 
-  // 三折线：(sx,sy) → (gutter,sy) → (gutter,ty) → (tx,ty)
-  return `M ${sx} ${sy} L ${gutter} ${sy} L ${gutter} ${ty} L ${tx} ${ty}`;
-}
+- [x] `css/v2/diagram.css` 在 S2 阶段保持**几乎为空**——v2 直接继承 v1 的 `css/diagram.css`（这些规则的 selector 大部分是 `g.node`、`g.section` 等全局选择器，对 v2 SVG 同样生效）
+- [x] 仅在确实需要 v2-only overlay 时（如 proxy 徽章、价差通道，将由 Module C/D 完成）才追加规则
 
-export function routeBezier(source, target, opts = {}) {
-  // 跨面板长边专用：贝塞尔
-  const sx = source.x + source.width;
-  const sy = source.y + source.height / 2;
-  const tx = target.x;
-  const ty = target.y + target.height / 2;
-  const cx = (sx + tx) / 2;
-  return `M ${sx} ${sy} C ${cx} ${sy}, ${cx} ${ty}, ${tx} ${ty}`;
-}
-
-export function pickRouter(source, target) {
-  // 同 panel 内 → Manhattan；跨 panel → Bezier
-  return source.panel === target.panel ? routeManhattan : routeBezier;
-}
-```
-
-- [ ] 修改 `js/v2/edges.js`，把现有 `d3.line()` / 直线绘制替换为 `pickRouter` 输出的路径
-- [ ] 把 `edge_routing_interface_design.md` 中预留的接口对接到 `routing.js`
-
-#### B5. 边束捆绑（Edge Bundling）
-
-- [ ] 在 `routing.js` 中新增 `bundleEdges(edges)`：把同源同终止区域的多条边聚为一束，前 30px 走同一路径再分叉。简化实现：
-
-```javascript
-// 同 source 节点出发的边，按 target.panel 分组，组内边在源点附近偏移
-export function applyBundleOffset(edges) {
-  const groups = {};
-  edges.forEach(e => {
-    const key = `${e.source}__${e.target_panel}`;
-    (groups[key] ??= []).push(e);
-  });
-  for (const arr of Object.values(groups)) {
-    if (arr.length <= 1) continue;
-    arr.forEach((e, i) => {
-      e._bundleOffset = (i - (arr.length - 1) / 2) * 8;  // ±8px 偏移
-    });
-  }
-  return edges;
-}
-```
-
-#### B6. CSS 样式
-
-- [ ] 修改 `css/v2/diagram.css`：
-
-```css
-/* css/v2/diagram.css 追加 */
-.layer-panels .panel {
-  fill: none;
-  stroke: #c8c8c8;
-  stroke-width: 1.5;
-}
-.layer-panels .panel-l1 { stroke: #8a8a8a; stroke-width: 2; }
-.layer-panels .panel-l2 { stroke: #b0b0b0; }
-.layer-panels .panel-l3 { stroke: #d0d0d0; stroke-dasharray: none; }
-
-.panel-label {
-  font-family: -apple-system, "Segoe UI", sans-serif;
-  fill: #555;
-  font-weight: 600;
-}
-.panel-label-l1 { font-size: 14px; letter-spacing: 0.06em; text-transform: uppercase; }
-.panel-label-l2 { font-size: 12px; fill: #777; }
-.panel-label-l3 { font-size: 11px; fill: #888; }
-
-.dash-frame {
-  fill: none;
-  stroke: #9aa0a6;
-  stroke-width: 1;
-  stroke-dasharray: 4 3;
-}
-.dash-label {
-  font-size: 10px;
-  fill: #666;
-  font-style: italic;
-}
-```
-
-### 2.3 验收（Module B）
+### 3.3 验收（Module B / S2）
 
 ```bash
 # 启动本地服务
 python3 -m http.server 8000
-# 在浏览器打开 http://localhost:8000
+# 在浏览器打开 http://localhost:8000，硬刷新（Cmd+Shift+R）后切到 "Optimized View" Tab
 ```
 
-**通过标准**（手动核对）：
-1. 看到左右两个 level=1 面板，标题 "FEDERAL RESERVE" 与 "U.S. DOLLAR FUNDING MARKET" 清晰
-2. 右侧面板内嵌 ONSHORE / OFFSHORE 两个 level=2 容器
-3. ONSHORE 内部有三个 level=3 子容器（Banks and Dealers / Onshore Investors / U.S. Gov）
-4. 5 个虚线分组正确包裹相应节点
-5. **没有任何边穿过节点矩形**（重点）
-6. **Fed → Market 跨面板边只走一条贝塞尔曲线**，同 panel 内边走 Manhattan
+**通过标准**（视觉对比）：
+1. v2 Tab 显示的面板/分组/虚线框/节点 **与 v1 完全一致**——同样的 28 节点（6 hexagon + 11 circle + 1 rectangle + 14 bs_parent/bs_child）
+2. 节点形状、文字、颜色与 v1 像素级等同
+3. v2 不显示**任何**连线（无箭头、无 path）——这是 S2 的预期，不是缺陷
+4. v2 不显示侧边栏 / 时间选择器 / 顶部 header（这些由 Module C/D/G 接入）
+5. 切回 v1 Tab，v1 渲染未受影响（无任何回归）
+
+**不通过的常见原因**：
+- 浏览器缓存：硬刷新（Cmd+Shift+R / Ctrl+F5）
+- v2 引入了自己重写的 PANELS / NODES：违反 §0.1.2，必须改回 re-export
+- v2 渲染器没调用 v1 的 renderSections/renderNodes：参考 §3.2 B2 的代码骨架
+
+
+
+> **本节（B1–B6 历史草案）已被 §3.2 上方的新任务清单替代。** 之前的草案给出了一套独立的节点坐标 / 路由实现，与 §0.1.2（v2 视觉等价 v1）冲突，故归档。需要 v2 边/路由细节请看 Module C / D / E。
 
 ---
 
@@ -1150,7 +936,7 @@ docs/
 
 #### C1. Proxy 注册表
 
-- [ ] 新建 `js/v2/proxy_registry.js`：
+- [x] 新建 `js/v2/proxy_registry.js`：
 
 ```javascript
 // js/v2/proxy_registry.js
@@ -1340,7 +1126,7 @@ export const EDGE_PROXIES = {
 
 #### C2. 注入 constants.js
 
-- [ ] 修改 `js/v2/constants.js`，让每个 NODE / EDGE 引用 `NODE_PROXIES` / `EDGE_PROXIES`：
+- [x] 修改 `js/v2/constants.js`，让每个 NODE / EDGE 引用 `NODE_PROXIES` / `EDGE_PROXIES`：
 
 ```javascript
 // js/v2/constants.js 顶部
@@ -1361,14 +1147,14 @@ export const EDGES = EDGES_RAW.map(e => ({
 
 #### C3. Tooltip 与节点徽章读取 proxy
 
-- [ ] 修改 `js/v2/tooltip.js`：当 hover 节点/边时，从 `node.proxy` / `edge.proxy` 读取 `primary.series` 并查询 `dataLoader` 获取最新值
-- [ ] 修改 `js/v2/nodes.js`：节点徽章右上角显示 proxy 主指标的最新值（格式见 `dataLoader.formatValue()`）
-- [ ] 对 `proxy_status: "not_found"` 的节点，徽章显示灰色 "n/a"
-- [ ] 对 `proxy_status: "external" / "partial"` 的节点，徽章右下角加小图标 ⓘ，hover 显示获取方式说明
+- [x] 修改 `js/v2/tooltip.js`：当 hover 节点/边时，从 `node.proxy` / `edge.proxy` 读取 `primary.series` 并查询 `dataLoader` 获取最新值
+- [x] 修改 `js/v2/nodes.js`：节点徽章右上角显示 proxy 主指标的最新值（格式见 `dataLoader.formatValue()`） — 通过新增 `js/v2/badges.js` 叠加层实现，避免改动 v1 渲染
+- [x] 对 `proxy_status: "not_found"` 的节点，徽章显示灰色 "n/a"
+- [x] 对 `proxy_status: "external" / "partial"` 的节点，徽章右下角加小图标 ⓘ，hover 显示获取方式说明
 
 #### C4. 人类可读的论证文档
 
-- [ ] 新建 `docs/proxy_mapping.md`，按节点/边各一张表，列出：
+- [x] 新建 `docs/proxy_mapping.md`，按节点/边各一张表，列出：
   - 节点 ID / 中文名
   - 主 proxy 系列（含 source、series_id、频率）
   - 备选 proxy
@@ -1398,7 +1184,7 @@ import('./js/v2/proxy_registry.js').then(m => {
 
 ### 4.1 任务清单
 
-- [ ] 修改 `js/v2/constants.js` 的 `EDGES`，新增三条：
+- [x] 修改 `js/v2/constants.js` 的 `EDGES`，新增三条：
 
 ```javascript
 // js/v2/constants.js — EDGES 新增片段
@@ -1422,7 +1208,18 @@ import('./js/v2/proxy_registry.js').then(m => {
   style: { color: "#17becf" } },
 ```
 
-- [ ] 在 `js/v2/sidebar.js` 的 Transaction Types 列表中追加这三类，含图例颜色
+- [x] 在 `js/v2/sidebar.js` 的 Transaction Types 列表中追加这三类，含图例颜色
+
+> **S4 完成说明（2026-04）**：
+> - 因 Module C 尚未追加 v2 专用 Fed-side 节点（`fed_repo_assets` / `fed_lending`），实现时把 endpoint 映射到现有 v1 BS 节点：
+>   - `edge_dw`: `us_banks → bs_primary_credit`（Primary Credit Facility = Discount Window）
+>   - `edge_foreign_rrp`: `fcb_swf_supra_offshore → bs_foreign_repo`（v1 已有 Foreign repo pool 子项）
+>   - `edge_srf`: `dealers → bs_others_assets`（临时挂靠；S3 完成后须 re-target 到 `fed_repo_assets`）
+> - Sidebar UI 在 v2 尚未挂载（Module B 验收明确不显示侧边栏），故 Transaction Types 三类以 `TRANSACTION_TYPES_V2_NEW` 数据形式暴露在 `js/v2/constants.js`，由后续 sidebar 渲染消费。
+> - `js/v2/edges.js` 同步扩展：
+>   - `toBox()` 把 v1 中心坐标节点转成 routing 期望的 top-left + size
+>   - 渲染遵循 `style.color` / `style.dash` / `label`（textPath 居中标签）
+>   - 同时把 `transaction_type` 写到 `data-transaction-type`，方便后续按类型 toggle
 
 > **自检建议（非阻塞）**：浏览器中点击 SRF / Discount Window / Foreign RRP 图例项，对应连线应高亮、其他变灰。
 

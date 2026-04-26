@@ -184,3 +184,53 @@ body {
   #main { grid-template-columns: 1fr; }
   .tooltip { display: none; }
 }
+
+/* ── Tab bar (v1 / v2 switcher) ─────────────────────────────────────────
+ * Append-only block: introduces no changes to existing v1 selectors.
+ */
+.tab-bar {
+  display: flex;
+  gap: 4px;
+  padding: 8px 16px 0;
+  border-bottom: 1px solid #e0e0e0;
+  background: #fafafa;
+  flex-shrink: 0;
+}
+.tab-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  border-bottom: none;
+  padding: 8px 16px;
+  font-size: 14px;
+  cursor: pointer;
+  border-radius: 4px 4px 0 0;
+  color: #666;
+  font-family: inherit;
+}
+.tab-btn:hover { color: #222; }
+.tab-btn.active {
+  background: #fff;
+  border-color: #d0d0d0;
+  color: #111;
+  font-weight: 600;
+  position: relative;
+  top: 1px;
+}
+.tab-badge-new {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  font-size: 10px;
+  background: #ff7f0e;
+  color: #fff;
+  border-radius: 8px;
+  font-weight: 700;
+  vertical-align: middle;
+}
+.tab-pane[hidden] { display: none; }
+.tab-pane.active {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
