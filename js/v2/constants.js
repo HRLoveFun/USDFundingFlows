@@ -53,34 +53,7 @@ export const NODES = V1_NODES.map(withNodeProxy);
  * Each raw edge is wrapped in `withEdgeProxy()` so consumers receive
  * `.proxy` metadata resolved against `proxy_registry.js`.
  */
-export const EDGES = [
-  {
-    id: "edge_dw",
-    source: "us_banks",
-    target: "bs_primary_credit",         // Primary Credit Facility = DW asset
-    transaction_type: "discount_window",
-    label: "Discount Window",
-    style: { color: "#9467bd", dash: "6 3" },
-  },
-  {
-    id: "edge_foreign_rrp",
-    source: "fcb_swf_supra_offshore",
-    target: "bs_foreign_repo",           // Foreign repo pool already on v1 BS
-    transaction_type: "on_rrp",
-    variant: "foreign",
-    label: "Foreign Repo Pool",
-    style: { color: "#17becf" },
-  },
-  {
-    id: "edge_srf",
-    source: "dealers",
-    // TODO(Module C / S3): re-target to dedicated `fed_repo_assets`.
-    target: "bs_others_assets",
-    transaction_type: "srf",
-    label: "SRF",
-    style: { color: "#d62728", dash: "4 2", arrow: "double" },
-  },
-].map(withEdgeProxy);
+export const EDGES = [].map(withEdgeProxy);
 
 /**
  * Legend entries for the three v2-only transaction types. Consumed by

@@ -1,0 +1,117 @@
+{
+  "_doc": "S2.2 anchor mapping. For each node with a non-null primary in js/v2/proxy_registry.js, defines the candidate proxy series and an independent benchmark (`anchor`) for the rolling 36M Pearson correlation. When `anchor` references the same series as `candidate`, corr_36m is set to 1.0 with note 'self-anchored: candidate IS the directly observed concept (no independent public benchmark exists)'. For nodes whose `proxy_status: external` flags whitelist-source dependence (per D-001), the entry is omitted here and the harness emits a 'pending-S2.4' record instead. Permanent-not_found nodes (foreign_insurers, corporates_offshore) are also omitted.",
+  "_format": "{node_id: {candidate: {source, series, metric?, freq}, anchor: {source, series, metric?, freq} | 'self', anchor_rationale: str}}",
+  "_sources": {
+    "FRED": "data/json/raw_observations.json (43 series) + data/json/raw_observations_v2.json (extra 9) + data/json/fed_balance_sheet.json (8 H.4.1 series)",
+    "NYFed": "data/json/nyfed_operations.json (5 endpoints × {metric: {date: value}})",
+    "Treasury": "data/json/treasury_flows.json (tga_balance_usd_m daily; auctions_btc_by_term keyed by Bill|13-Week etc.)",
+    "Derived": "data/json/pressure_indicators.json (4 spread series)"
+  },
+  "anchors": {
+    "bs_treasuries": {
+      "candidate": {"source": "FRED", "series": "TREAST", "freq": "W"},
+      "anchor": "self",
+      "anchor_rationale": "TREAST is the Fed UST holdings line item itself; no independent public benchmark."
+    },
+    "bs_agency_mbs": {
+      "candidate": {"source": "FRED", "series": "MBST", "freq": "W"},
+      "anchor": "self",
+      "anchor_rationale": "MBST is Fed agency MBS holdings directly; same as the node concept."
+    },
+    "bs_primary_credit": {
+      "candidate": {"source": "FRED", "series": "WLCFLPCL", "freq": "W"},
+      "anchor": "self",
+      "anchor_rationale": "WLCFLPCL is the Discount Window primary-credit line on H.4.1; node concept = series."
+    },
+    "bs_cb_swaps": {
+      "candidate": {"source": "FRED", "series": "H41RESPPALDKNWW", "freq": "W"},
+      "anchor": "self",
+      "anchor_rationale": "H41RESPPALDKNWW is central-bank USD liquidity swaps directly."
+    },
+    "bs_reserve_balances": {
+      "candidate": {"source": "FRED", "series": "WRESBAL", "freq": "W"},
+      "anchor": {"source": "FRED", "series": "WALCL", "freq": "W"},
+      "anchor_rationale": "Cross-reference reserve balances against total Fed balance-sheet size (WALCL); demonstrates the QE/QT-driven co-movement and ΔWRESBAL ≠ ΔWALCL gap from TGA/RRP."
+    },
+    "bs_fed_notes": {
+      "candidate": {"source": "FRED", "series": "CURRCIR", "freq": "W"},
+      "anchor": "self",
+      "anchor_rationale": "CURRCIR is currency in circulation directly; structural liability."
+    },
+    "bs_rrp": {
+      "candidate": {"source": "FRED", "series": "RRPONTTLD", "freq": "D"},
+      "anchor": {"source": "NYFed", "series": "rrp_ops", "metric": "amt_accepted", "freq": "D"},
+      "anchor_rationale": "Cross-source: FRED RRPONTTLD (Overnight Reverse Repurchase Agreements: Total Operations, $B daily) vs NYFed daily ON RRP operation accepted amount; tests R001 cross-source alignment for a top-priority node. R009 fix 2026-04-26: original registry referenced RPONTSYD which in raw_observations.json contains only 610/3474 non-zero observations at magnitude ~0.001; RRPONTTLD is the correct full take-up series matching NYFed amt_accepted."
+    },
+    "bs_rrp_omo": {
+      "candidate": {"source": "FRED", "series": "RRPONTTLD", "freq": "D"},
+      "anchor": {"source": "NYFed", "series": "rrp_ops", "metric": "amt_accepted", "freq": "D"},
+      "anchor_rationale": "ON RRP open-market component is the dominant share of total operations; same anchor as bs_rrp by construction. R009 fix 2026-04-26: see bs_rrp note."
+    },
+    "bs_foreign_repo": {
+      "candidate": {"source": "FRED", "series": "WLRRAL", "freq": "W"},
+      "anchor": "self",
+      "anchor_rationale": "WLRRAL = Fed total reverse repo liability incl. foreign repo pool; closest single-series proxy for offshore USD repo reservoir."
+    },
+    "bs_tga": {
+      "candidate": {"source": "Treasury", "series": "tga_balance_usd_m", "freq": "D"},
+      "anchor": {"source": "FRED", "series": "WTREGEN", "freq": "W"},
+      "anchor_rationale": "Cross-source: Treasury daily TGA balance vs FRED weekly H.4.1 TGA line (WTREGEN). Tests R001 cross-source alignment between Treasury Fiscal Data and Fed H.4.1."
+    },
+    "corporates_onshore": {
+      "candidate": {"source": "FRED", "series": "COMPAPER", "freq": "W"},
+      "anchor": "self",
+      "anchor_rationale": "COMPAPER is total nonfinancial commercial paper outstanding; direct reading of corporate short-funding footprint."
+    },
+    "fcb_swf_supra_offshore": {
+      "candidate": {"source": "FRED", "series": "WLRRAL", "freq": "W"},
+      "anchor": "self",
+      "anchor_rationale": "Foreign repo pool sits inside WLRRAL; presented offshore on the diagram for flow visualization but the underlying series is the same as bs_foreign_repo."
+    },
+    "fcb_swf_supra_onshore": {
+      "candidate": {"source": "FRED", "series": "WLRRAL", "freq": "W"},
+      "anchor": "self",
+      "anchor_rationale": "Onshore-mirror node for the same foreign repo pool series."
+    },
+    "foreign_banks": {
+      "candidate": {"source": "FRED", "series": "H8B1058NCBCMG", "freq": "W"},
+      "anchor": "self",
+      "anchor_rationale": "H.8 H8B1058NCBCMG is the bank-credit line for foreign-related institutions; closest single-series proxy."
+    },
+    "us_banks": {
+      "candidate": {"source": "FRED", "series": "TOTBKCR", "freq": "W"},
+      "anchor": "self",
+      "anchor_rationale": "TOTBKCR is total H.8 commercial-bank credit; node concept = series."
+    },
+    "us_fbo": {
+      "candidate": {"source": "FRED", "series": "H8B1058NCBCMG", "freq": "W"},
+      "anchor": "self",
+      "anchor_rationale": "Same H.8 foreign-related bank credit line; FBO and foreign_banks share the closest public proxy."
+    },
+    "us_treasury": {
+      "candidate": {"source": "Treasury", "series": "tga_balance_usd_m", "freq": "D"},
+      "anchor": {"source": "FRED", "series": "WTREGEN", "freq": "W"},
+      "anchor_rationale": "Treasury entity's cash position is best captured by TGA daily balance; cross-anchored against FRED H.4.1 WTREGEN for cross-source robustness (same logic as bs_tga)."
+    },
+    "dealers": {
+      "candidate": {"source": "NYFed", "series": "primary_dealer_ust_position", "freq": "W"},
+      "anchor": "self",
+      "anchor_rationale": "S2.4 — NYFed Primary Dealer Statistics PDPOSGST-TOT (UST excl. TIPS, total dealer net position) is the canonical SLR-constrained dealer book read; no independent public benchmark."
+    },
+    "gov_mmf": {
+      "candidate": {"source": "OFR", "series": "ofr_mmf_treasury_repo_total", "freq": "M"},
+      "anchor": {"source": "FRED", "series": "RRPONTTLD", "freq": "D"},
+      "anchor_rationale": "S2.4 — OFR MMF Monitor MMF-MMF_T_TOT-M (Treasury-collateralized repo holdings across MMF complex; Government MMFs dominate this bucket) cross-anchored against FRED RRPONTTLD; theory: Government MMF AUM and ON RRP take-up co-move strongly when T-bill yields drop below the RRP rate."
+    },
+    "prime_mmf": {
+      "candidate": {"source": "OFR", "series": "ofr_mmf_other_assets_total", "freq": "M"},
+      "anchor": "self",
+      "anchor_rationale": "S2.4 — OFR MMF Monitor MMF-MMF_OA_TOT-M (non-Treasury repo holdings; Prime + Tax-Exempt funds dominate this bucket) is the closest portfolio-side proxy for prime MMF scale; no cleanly separated independent fund-category-side public series exists in OFR Monitor mnemonics."
+    },
+    "hedge_funds": {
+      "candidate": {"source": "OFR", "series": "ofr_repo_dvp_overnight_volume", "freq": "D"},
+      "anchor": "self",
+      "anchor_rationale": "S2.4 — OFR Repo Monitor REPO-DVP_OV_OO-P (DVP overnight outstanding volume; FICC-cleared sponsored repo flows through this stream) is the canonical public proxy for hedge-fund cash-futures basis-trade leverage scale; CFTC TFF UST-futures net-short positions are kept as alternates for cross-validation."
+    }
+  }
+}

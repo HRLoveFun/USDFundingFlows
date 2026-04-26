@@ -1,0 +1,15 @@
+{
+  "node_id": "foreign_insurers",
+  "candidate": null,
+  "anchor": null,
+  "self_anchored": false,
+  "anchor_rationale": null,
+  "window": "36M_monthly",
+  "corr_36m": null,
+  "corr_full_sample": null,
+  "sample_months": 0,
+  "start_date": null,
+  "end_date": null,
+  "note": "permanent-not_found (D-001): no public daily/weekly time series for foreign insurer USD asset holdings; NAIC quarterly is closest indirect proxy.",
+  "monthly_pairs": []
+}

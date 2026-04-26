@@ -151,3 +151,99 @@ export function showEdgeProxy(edge, event, dataLoader, proxyRegistry) {
 // Backwards-compat aliases (placeholder names from the S2 stub)
 export const showNodeTooltip = showNodeProxy;
 export const showEdgeTooltip = showEdgeProxy;
+
+/**
+ * Minimal hover tooltip for proxy-value badges (S3.2 + S3.3).
+ *
+ * S3.2 surfaces:
+ *   - proxy 简写: source · proxy_id · frequency · units
+ *   - observation YYYY-MM (FRED hit) / last updated YYYY-MM (non-FRED)
+ *
+ * S3.3 adds (when present in the `extras` object):
+ *   - stale line:     "stale: <N>d since YYYY-MM (threshold <T>d)"
+ *   - violation line: "cross-source diff > 5% — see registry alternates"
+ *     plus the matching pair record from `data/json/cross_source_diff.json`
+ *
+ * For nodes whose `primary === null` this surfaces the registry `reason`.
+ *
+ * @param {object} node       v2 NODE (decorated with proxy)
+ * @param {Event}  event      pointer event
+ * @param {object} dataLoader v1 DataLoader instance (optional)
+ * @param {string|null} [obsDate] observation date YYYY-MM-DD resolved by badge
+ * @param {{stale?: object|null, violation?: boolean, crossDiff?: object|null}} [extras]
+ */
+export function showBadgeProxy(node, event, dataLoader, obsDate = null, extras = {}) {
+  const el = initTooltip();
+  const proxy = node.proxy ?? null;
+  const title = `<div class="tt-title">${escape(node.label?.replace(/\n/g, " ") ?? node.id)}</div>`;
+  if (!proxy) {
+    el.innerHTML = title + `<div class="tt-row tt-muted">no proxy registered</div>`;
+    el.classList.remove("hidden");
+    positionTooltip(event);
+    return;
+  }
+  if (proxy.primary == null) {
+    el.innerHTML =
+      title +
+      `<div class="tt-row tt-muted">primary: <em>null</em></div>` +
+      (proxy.reason ? `<div class="tt-rationale tt-muted">${escape(proxy.reason)}</div>` : "");
+    el.classList.remove("hidden");
+    positionTooltip(event);
+    return;
+  }
+  const p = proxy.primary;
+  const freqUnits = [p.frequency, p.units].filter(Boolean).join(" · ");
+  const ymObs = obsDate
+    ? obsDate.slice(0, 7)
+    : (proxy.last_updated ? proxy.last_updated.slice(0, 7) : null);
+  const obsLabel = obsDate ? "observation" : "last updated";
+
+  // S3.3 extras
+  const stale     = extras?.stale ?? null;
+  const violation = extras?.violation === true;
+  const crossDiff = extras?.crossDiff ?? null;
+
+  let staleLine = "";
+  if (stale) {
+    staleLine = `<div class="tt-row tt-stale">⚠ stale: ${stale.ageDays}d since ${escape(stale.since)} (threshold ${stale.threshold}d)</div>`;
+  }
+
+  let violationLine = "";
+  if (violation) {
+    const pair = findViolationPair(node.id, crossDiff);
+    if (pair) {
+      const cand = pair.candidate ?? {};
+      const comp = pair.comparator ?? {};
+      const diffPct = pair.relative_diff_pct != null ? pair.relative_diff_pct.toFixed(1) : "?";
+      violationLine =
+        `<div class="tt-row tt-violation">⚠ cross-source diff ${diffPct}% &gt; 5%</div>` +
+        `<div class="tt-row tt-muted">${escape(cand.source)} <code>${escape(cand.series ?? "")}</code> vs ${escape(comp.source)} <code>${escape(comp.series ?? "")}</code></div>`;
+    } else {
+      violationLine = `<div class="tt-row tt-violation">⚠ cross-source diff &gt; 5%</div>`;
+    }
+  }
+
+  el.innerHTML =
+    title +
+    `<div class="tt-row"><span class="tt-label">proxy:</span> ${escape(p.source)} · <code>${escape(p.proxy_id ?? "")}</code></div>` +
+    (freqUnits ? `<div class="tt-row tt-muted">${escape(freqUnits)}</div>` : "") +
+    (ymObs ? `<div class="tt-row tt-date">${escape(obsLabel)}: ${escape(ymObs)}</div>` : "") +
+    staleLine +
+    violationLine;
+  el.classList.remove("hidden");
+  positionTooltip(event);
+}
+
+/** Locate the same_concept pair that triggered the 5% violation for node_id. */
+function findViolationPair(nodeId, crossDiff) {
+  const pairs = crossDiff?.pairs;
+  if (!Array.isArray(pairs)) return null;
+  for (const pr of pairs) {
+    if (pr.node_id !== nodeId) continue;
+    if (pr.same_concept !== true) continue;
+    if (pr.substitute === true) continue;
+    if (typeof pr.relative_diff_pct !== "number") continue;
+    if (Math.abs(pr.relative_diff_pct) > 5) return pr;
+  }
+  return null;
+}

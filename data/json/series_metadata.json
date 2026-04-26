@@ -512,5 +512,122 @@
   "node_ids": [
    "gov_mmf"
   ]
+ },
+ "WTREGEN": {
+  "name": "TGA (Weekly, H.4.1)",
+  "units": "Mil. USD",
+  "frequency": "W",
+  "transaction_type": null,
+  "node_ids": [
+   "us_treasury",
+   "federal_reserve"
+  ]
+ },
+ "WLCFOCEL": {
+  "name": "BTFP Outstanding (Other Credit Extensions)",
+  "units": "Mil. USD",
+  "frequency": "W",
+  "transaction_type": null,
+  "node_ids": [
+   "us_banks",
+   "federal_reserve"
+  ]
+ },
+ "H41RESPPALDKNWW": {
+  "name": "Central Bank Liquidity Swaps (H.4.1 Wed)",
+  "units": "Mil. USD",
+  "frequency": "W",
+  "transaction_type": null,
+  "node_ids": [
+   "federal_reserve",
+   "fcb_supra_swf"
+  ]
+ },
+ "OBFR": {
+  "name": "Overnight Bank Funding Rate",
+  "units": "Rate (%)",
+  "frequency": "D",
+  "transaction_type": null,
+  "node_ids": [
+   "us_banks",
+   "fbo"
+  ]
+ },
+ "DCPF1M": {
+  "name": "1-Month Financial Commercial Paper Rate",
+  "units": "Rate (%)",
+  "frequency": "D",
+  "transaction_type": null,
+  "node_ids": [
+   "us_banks",
+   "prime_mmf"
+  ]
+ },
+ "DCPN30": {
+  "name": "1-Month Nonfinancial Commercial Paper Rate",
+  "units": "Rate (%)",
+  "frequency": "D",
+  "transaction_type": null,
+  "node_ids": [
+   "corporates",
+   "prime_mmf"
+  ]
+ },
+ "TOTBKCR": {
+  "name": "Bank Credit, All Commercial Banks (H.8)",
+  "units": "Bil. USD",
+  "frequency": "W",
+  "transaction_type": null,
+  "node_ids": [
+   "us_banks"
+  ]
+ },
+ "DTB4WK": {
+  "name": "4-Week Treasury Bill: Secondary Market Rate",
+  "units": "Rate (%)",
+  "frequency": "D",
+  "transaction_type": null,
+  "node_ids": [
+   "us_treasury"
+  ]
+ },
+ "DTB3": {
+  "name": "3-Month Treasury Bill: Secondary Market Rate",
+  "units": "Rate (%)",
+  "frequency": "D",
+  "transaction_type": null,
+  "node_ids": [
+   "us_treasury"
+  ]
+ },
+ "MBST": {
+  "name": "Fed Holdings of Agency MBS (DISCONTINUED 2018)",
+  "units": "Mil. USD",
+  "frequency": "W",
+  "transaction_type": null,
+  "node_ids": [
+   "bs_agency_mbs",
+   "federal_reserve"
+  ]
+ },
+ "CURRCIR": {
+  "name": "Currency in Circulation (DISCONTINUED)",
+  "units": "Bil. USD",
+  "frequency": "M",
+  "transaction_type": null,
+  "node_ids": [
+   "bs_fed_notes",
+   "federal_reserve"
+  ]
+ },
+ "H8B1058NCBCMG": {
+  "name": "Deposits, All Commercial Banks (% chg, annualized)",
+  "units": "Percent",
+  "frequency": "M",
+  "transaction_type": null,
+  "node_ids": [
+   "foreign_banks",
+   "us_fbo"
+  ]
  }
 }

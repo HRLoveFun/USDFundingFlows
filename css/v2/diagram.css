@@ -23,6 +23,14 @@
 .proxy-badge-value .proxy-badge-bg   { fill: #ffffff; stroke: #5c6bc0; }
 .proxy-badge-value .proxy-badge-text { fill: #1f2933; }
 
+/* S3.3 stale: gray-out (D-006 thresholds: D=7 W=21 M=60 Q=180 days). */
+.proxy-badge-stale .proxy-badge-bg     { fill: #eceff1; stroke: #b0b8be; }
+.proxy-badge-stale .proxy-badge-text   { fill: #8a9099; font-weight: 500; }
+
+/* S3.3 violation: amber (cross-source 5% rule, spec AC#5/AC#6). */
+.proxy-badge-violation .proxy-badge-bg   { fill: #fff3cd; stroke: #d29c00; }
+.proxy-badge-violation .proxy-badge-text { fill: #6b4900; font-weight: 700; }
+
 /* ── v2 tooltip (independent from v1 .tooltip) ─────────────────── */
 .tooltip-v2 {
   position: fixed;
@@ -73,3 +81,5 @@
 .tooltip-v2 .tt-status-partial     { color: #b07d00; }
 .tooltip-v2 .tt-status-external    { color: #b04500; }
 .tooltip-v2 .tt-status-not_found   { color: #888c92; }
+.tooltip-v2 .tt-stale              { color: #6b6f76; font-weight: 600; }
+.tooltip-v2 .tt-violation          { color: #b07000; font-weight: 700; }

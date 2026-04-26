@@ -1,0 +1,976 @@
+{
+  "node_id": "bs_treasuries",
+  "candidate": "FRED:TREAST",
+  "anchor": "FRED:TREAST",
+  "self_anchored": true,
+  "anchor_rationale": "TREAST is the Fed UST holdings line item itself; no independent public benchmark.",
+  "window": "36M_monthly",
+  "corr_36m": 1.0,
+  "corr_full_sample": 1.0,
+  "sample_months": 160,
+  "start_date": "2013-01",
+  "end_date": "2026-04",
+  "note": "self-anchored: candidate IS the directly observed concept (no independent public benchmark exists)",
+  "monthly_pairs": [
+    {
+      "month": "2013-01",
+      "anchor": 1710058.0,
+      "candidate": 1710058.0,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2013-02",
+      "anchor": 1749545.0,
+      "candidate": 1749545.0,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2013-03",
+      "anchor": 1794459.0,
+      "candidate": 1794459.0,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2013-04",
+      "anchor": 1836227.0,
+      "candidate": 1836227.0,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2013-05",
+      "anchor": 1883559.0,
+      "candidate": 1883559.0,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2013-06",
+      "anchor": 1928416.0,
+      "candidate": 1928416.0,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2013-07",
+      "anchor": 1982407.0,
+      "candidate": 1982407.0,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2013-08",
+      "anchor": 2023610.0,
+      "candidate": 2023610.0,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2013-09",
+      "anchor": 2062004.0,
+      "candidate": 2062004.0,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2013-10",
+      "anchor": 2117750.0,
+      "candidate": 2117750.0,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2013-11",
+      "anchor": 2163666.0,
+      "candidate": 2163666.0,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2013-12",
+      "anchor": 2208829.0,
+      "candidate": 2208829.0,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2014-01",
+      "anchor": 2243176.0,
+      "candidate": 2243176.0,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2014-02",
+      "anchor": 2278256.0,
+      "candidate": 2278256.0,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2014-03",
+      "anchor": 2311539.0,
+      "candidate": 2311539.0,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2014-04",
+      "anchor": 2350272.0,
+      "candidate": 2350272.0,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2014-05",
+      "anchor": 2370724.0,
+      "candidate": 2370724.0,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2014-06",
+      "anchor": 2396972.0,
+      "candidate": 2396972.0,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2014-07",
+      "anchor": 2420285.0,
+      "candidate": 2420285.0,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2014-08",
+      "anchor": 2435932.0,
+      "candidate": 2435932.0,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2014-09",
+      "anchor": 2448625.0,
+      "candidate": 2448625.0,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2014-10",
+      "anchor": 2461580.0,
+      "candidate": 2461580.0,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2014-11",
+      "anchor": 2461645.0,
+      "candidate": 2461645.0,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2014-12",
+      "anchor": 2461364.0,
+      "candidate": 2461364.0,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2015-01",
+      "anchor": 2460804.0,
+      "candidate": 2460804.0,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2015-02",
+      "anchor": 2460167.0,
+      "candidate": 2460167.0,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2015-03",
+      "anchor": 2459666.0,
+      "candidate": 2459666.0,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2015-04",
+      "anchor": 2460034.0,
+      "candidate": 2460034.0,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2015-05",
+      "anchor": 2460639.0,
+      "candidate": 2460639.0,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2015-06",
+      "anchor": 2460911.0,
+      "candidate": 2460911.0,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2015-07",
+      "anchor": 2461502.0,
+      "candidate": 2461502.0,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2015-08",
+      "anchor": 2461876.0,
+      "candidate": 2461876.0,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2015-09",
+      "anchor": 2461948.0,
+      "candidate": 2461948.0,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2015-10",
+      "anchor": 2461800.0,
+      "candidate": 2461800.0,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2015-11",
+      "anchor": 2461628.0,
+      "candidate": 2461628.0,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2015-12",
+      "anchor": 2461554.0,
+      "candidate": 2461554.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2016-01",
+      "anchor": 2461341.0,
+      "candidate": 2461341.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2016-02",
+      "anchor": 2461211.0,
+      "candidate": 2461211.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2016-03",
+      "anchor": 2461326.0,
+      "candidate": 2461326.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2016-04",
+      "anchor": 2461413.0,
+      "candidate": 2461413.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2016-05",
+      "anchor": 2461637.0,
+      "candidate": 2461637.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2016-06",
+      "anchor": 2462303.0,
+      "candidate": 2462303.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2016-07",
+      "anchor": 2462763.0,
+      "candidate": 2462763.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2016-08",
+      "anchor": 2463645.0,
+      "candidate": 2463645.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2016-09",
+      "anchor": 2463460.0,
+      "candidate": 2463460.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2016-10",
+      "anchor": 2463544.0,
+      "candidate": 2463544.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2016-11",
+      "anchor": 2463861.0,
+      "candidate": 2463861.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2016-12",
+      "anchor": 2463601.0,
+      "candidate": 2463601.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2017-01",
+      "anchor": 2463462.0,
+      "candidate": 2463462.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2017-02",
+      "anchor": 2463456.0,
+      "candidate": 2463456.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2017-03",
+      "anchor": 2464335.0,
+      "candidate": 2464335.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2017-04",
+      "anchor": 2464730.0,
+      "candidate": 2464730.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2017-05",
+      "anchor": 2464696.0,
+      "candidate": 2464696.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2017-06",
+      "anchor": 2465046.0,
+      "candidate": 2465046.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2017-07",
+      "anchor": 2465170.0,
+      "candidate": 2465170.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2017-08",
+      "anchor": 2465300.0,
+      "candidate": 2465300.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2017-09",
+      "anchor": 2465427.0,
+      "candidate": 2465427.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2017-10",
+      "anchor": 2465727.0,
+      "candidate": 2465727.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2017-11",
+      "anchor": 2456959.0,
+      "candidate": 2456959.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2017-12",
+      "anchor": 2454219.0,
+      "candidate": 2454219.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2018-01",
+      "anchor": 2436211.0,
+      "candidate": 2436211.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2018-02",
+      "anchor": 2424242.0,
+      "candidate": 2424242.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2018-03",
+      "anchor": 2424883.0,
+      "candidate": 2424883.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2018-04",
+      "anchor": 2413218.0,
+      "candidate": 2413218.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2018-05",
+      "anchor": 2387103.0,
+      "candidate": 2387103.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2018-06",
+      "anchor": 2378250.0,
+      "candidate": 2378250.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2018-07",
+      "anchor": 2359893.0,
+      "candidate": 2359893.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2018-08",
+      "anchor": 2324589.0,
+      "candidate": 2324589.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2018-09",
+      "anchor": 2313208.0,
+      "candidate": 2313208.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2018-10",
+      "anchor": 2270399.0,
+      "candidate": 2270399.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2018-11",
+      "anchor": 2253117.0,
+      "candidate": 2253117.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2018-12",
+      "anchor": 2240717.0,
+      "candidate": 2240717.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2019-01",
+      "anchor": 2220012.0,
+      "candidate": 2220012.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2019-02",
+      "anchor": 2182092.0,
+      "candidate": 2182092.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2019-03",
+      "anchor": 2175596.0,
+      "candidate": 2175596.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2019-04",
+      "anchor": 2153544.0,
+      "candidate": 2153544.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2019-05",
+      "anchor": 2114744.0,
+      "candidate": 2114744.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2019-06",
+      "anchor": 2110256.0,
+      "candidate": 2110256.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2019-07",
+      "anchor": 2080700.0,
+      "candidate": 2080700.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2019-08",
+      "anchor": 2095130.0,
+      "candidate": 2095130.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2019-09",
+      "anchor": 2107683.0,
+      "candidate": 2107683.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2019-10",
+      "anchor": 2175491.0,
+      "candidate": 2175491.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2019-11",
+      "anchor": 2248498.0,
+      "candidate": 2248498.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2019-12",
+      "anchor": 2328862.0,
+      "candidate": 2328862.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2020-01",
+      "anchor": 2409108.0,
+      "candidate": 2409108.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2020-02",
+      "anchor": 2474060.0,
+      "candidate": 2474060.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2020-03",
+      "anchor": 2978372.0,
+      "candidate": 2978372.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2020-04",
+      "anchor": 3971419.0,
+      "candidate": 3971419.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2020-05",
+      "anchor": 4109512.0,
+      "candidate": 4109512.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2020-06",
+      "anchor": 4197404.0,
+      "candidate": 4197404.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2020-07",
+      "anchor": 4293563.0,
+      "candidate": 4293563.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2020-08",
+      "anchor": 4358559.0,
+      "candidate": 4358559.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2020-09",
+      "anchor": 4445477.0,
+      "candidate": 4445477.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2020-10",
+      "anchor": 4527186.0,
+      "candidate": 4527186.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2020-11",
+      "anchor": 4606580.0,
+      "candidate": 4606580.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2020-12",
+      "anchor": 4688916.0,
+      "candidate": 4688916.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2021-01",
+      "anchor": 4766107.0,
+      "candidate": 4766107.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2021-02",
+      "anchor": 4844574.0,
+      "candidate": 4844574.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2021-03",
+      "anchor": 4942277.0,
+      "candidate": 4942277.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2021-04",
+      "anchor": 5014762.0,
+      "candidate": 5014762.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2021-05",
+      "anchor": 5087157.0,
+      "candidate": 5087157.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2021-06",
+      "anchor": 5183385.0,
+      "candidate": 5183385.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2021-07",
+      "anchor": 5263740.0,
+      "candidate": 5263740.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2021-08",
+      "anchor": 5346372.0,
+      "candidate": 5346372.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2021-09",
+      "anchor": 5431056.0,
+      "candidate": 5431056.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2021-10",
+      "anchor": 5513329.0,
+      "candidate": 5513329.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2021-11",
+      "anchor": 5578900.0,
+      "candidate": 5578900.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2021-12",
+      "anchor": 5652272.0,
+      "candidate": 5652272.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2022-01",
+      "anchor": 5716217.0,
+      "candidate": 5716217.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2022-02",
+      "anchor": 5741778.0,
+      "candidate": 5741778.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2022-03",
+      "anchor": 5760030.0,
+      "candidate": 5760030.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2022-04",
+      "anchor": 5764013.0,
+      "candidate": 5764013.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2022-05",
+      "anchor": 5769417.0,
+      "candidate": 5769417.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2022-06",
+      "anchor": 5763933.0,
+      "candidate": 5763933.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2022-07",
+      "anchor": 5734180.0,
+      "candidate": 5734180.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2022-08",
+      "anchor": 5694997.0,
+      "candidate": 5694997.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2022-09",
+      "anchor": 5671848.0,
+      "candidate": 5671848.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2022-10",
+      "anchor": 5608738.0,
+      "candidate": 5608738.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2022-11",
+      "anchor": 5515984.0,
+      "candidate": 5515984.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2022-12",
+      "anchor": 5500834.0,
+      "candidate": 5500834.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2023-01",
+      "anchor": 5435582.0,
+      "candidate": 5435582.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2023-02",
+      "anchor": 5364291.0,
+      "candidate": 5364291.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2023-03",
+      "anchor": 5329303.0,
+      "candidate": 5329303.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2023-04",
+      "anchor": 5265728.0,
+      "candidate": 5265728.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2023-05",
+      "anchor": 5164237.0,
+      "candidate": 5164237.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2023-06",
+      "anchor": 5145080.0,
+      "candidate": 5145080.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2023-07",
+      "anchor": 5080981.0,
+      "candidate": 5080981.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2023-08",
+      "anchor": 5006839.0,
+      "candidate": 5006839.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2023-09",
+      "anchor": 4958138.0,
+      "candidate": 4958138.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2023-10",
+      "anchor": 4912200.0,
+      "candidate": 4912200.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2023-11",
+      "anchor": 4843174.0,
+      "candidate": 4843174.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2023-12",
+      "anchor": 4790547.0,
+      "candidate": 4790547.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2024-01",
+      "anchor": 4692721.0,
+      "candidate": 4692721.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2024-02",
+      "anchor": 4661257.0,
+      "candidate": 4661257.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2024-03",
+      "anchor": 4618082.0,
+      "candidate": 4618082.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2024-04",
+      "anchor": 4539799.0,
+      "candidate": 4539799.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2024-05",
+      "anchor": 4489444.0,
+      "candidate": 4489444.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2024-06",
+      "anchor": 4453571.0,
+      "candidate": 4453571.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2024-07",
+      "anchor": 4413615.0,
+      "candidate": 4413615.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2024-08",
+      "anchor": 4398721.0,
+      "candidate": 4398721.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2024-09",
+      "anchor": 4384130.0,
+      "candidate": 4384130.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2024-10",
+      "anchor": 4357825.0,
+      "candidate": 4357825.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2024-11",
+      "anchor": 4323134.0,
+      "candidate": 4323134.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2024-12",
+      "anchor": 4308893.0,
+      "candidate": 4308893.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2025-01",
+      "anchor": 4274511.0,
+      "candidate": 4274511.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2025-02",
+      "anchor": 4251338.0,
+      "candidate": 4251338.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2025-03",
+      "anchor": 4237419.0,
+      "candidate": 4237419.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2025-04",
+      "anchor": 4215813.0,
+      "candidate": 4215813.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2025-05",
+      "anchor": 4213730.0,
+      "candidate": 4213730.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2025-06",
+      "anchor": 4212617.0,
+      "candidate": 4212617.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2025-07",
+      "anchor": 4206916.0,
+      "candidate": 4206916.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2025-08",
+      "anchor": 4202351.0,
+      "candidate": 4202351.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2025-09",
+      "anchor": 4201212.0,
+      "candidate": 4201212.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2025-10",
+      "anchor": 4196739.0,
+      "candidate": 4196739.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2025-11",
+      "anchor": 4191225.0,
+      "candidate": 4191225.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2025-12",
+      "anchor": 4227801.0,
+      "candidate": 4227801.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2026-01",
+      "anchor": 4265977.0,
+      "candidate": 4265977.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2026-02",
+      "anchor": 4321596.0,
+      "candidate": 4321596.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2026-03",
+      "anchor": 4375064.0,
+      "candidate": 4375064.0,
+      "rolling_corr_36m": 1.0
+    },
+    {
+      "month": "2026-04",
+      "anchor": 4420267.0,
+      "candidate": 4420267.0,
+      "rolling_corr_36m": 1.0
+    }
+  ]
+}

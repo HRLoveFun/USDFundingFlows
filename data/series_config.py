@@ -439,4 +439,39 @@ FRED_SERIES_V2 = {
         "node_ids": ["us_treasury"],
         "group": "treasury_rates",
     },
+
+    # === R008 unblock (S4.1, D-003 Part B; metadata corrected per D-007 Part B) ===
+    # Three FRED series referenced as `primary` in js/v2/proxy_registry.js
+    # but historically missing from this config. Adding them here lets
+    # fetch_fred_data.py + build_database.py + export_json.py surface them in
+    # data/json/time_series.json and proxy_validation.py compute corr_36m.
+    # NB: live FRED metadata audit at S4.1 close (D-007 Part B) reveals MBST
+    # was discontinued 2018-06-13; CURRCIR is monthly + Bil. USD;
+    # H8B1058NCBCMG is "Deposits, All Commercial Banks (% chg, annualized)",
+    # NOT a level series — the original concept assumption was wrong.
+    # Registry-side resolution lives in D-007 Part C.
+    "MBST": {
+        "name": "Fed Holdings of Agency MBS (DISCONTINUED 2018)",
+        "units": "Mil. USD",
+        "frequency": "W",
+        "transaction_type": None,
+        "node_ids": ["bs_agency_mbs", "federal_reserve"],
+        "group": "fed_bs",
+    },
+    "CURRCIR": {
+        "name": "Currency in Circulation (DISCONTINUED)",
+        "units": "Bil. USD",
+        "frequency": "M",
+        "transaction_type": None,
+        "node_ids": ["bs_fed_notes", "federal_reserve"],
+        "group": "fed_bs",
+    },
+    "H8B1058NCBCMG": {
+        "name": "Deposits, All Commercial Banks (% chg, annualized)",
+        "units": "Percent",
+        "frequency": "M",
+        "transaction_type": None,
+        "node_ids": ["foreign_banks", "us_fbo"],
+        "group": "bank",
+    },
 }

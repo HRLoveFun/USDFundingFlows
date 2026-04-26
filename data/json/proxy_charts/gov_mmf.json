@@ -1,0 +1,934 @@
+{
+  "node_id": "gov_mmf",
+  "candidate": "OFR:ofr_mmf_treasury_repo_total",
+  "anchor": "FRED:RRPONTTLD",
+  "self_anchored": false,
+  "anchor_rationale": "S2.4 \u2014 OFR MMF Monitor MMF-MMF_T_TOT-M (Treasury-collateralized repo holdings across MMF complex; Government MMFs dominate this bucket) cross-anchored against FRED RRPONTTLD; theory: Government MMF AUM and ON RRP take-up co-move strongly when T-bill yields drop below the RRP rate.",
+  "window": "36M_monthly",
+  "corr_36m": -0.9650963708399874,
+  "corr_full_sample": 0.04832340984878971,
+  "sample_months": 153,
+  "start_date": "2013-04",
+  "end_date": "2026-03",
+  "note": null,
+  "monthly_pairs": [
+    {
+      "month": "2013-04",
+      "anchor": 1.19,
+      "candidate": 491696798700.18,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2013-08",
+      "anchor": 5.0,
+      "candidate": 518004956722.87,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2013-09",
+      "anchor": 58.157,
+      "candidate": 526614100042.37,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2013-10",
+      "anchor": 13.89,
+      "candidate": 504989966944.1,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2013-11",
+      "anchor": 22.018,
+      "candidate": 515762045834.25,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2013-12",
+      "anchor": 197.755,
+      "candidate": 547200760316.17,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2014-01",
+      "anchor": 102.139,
+      "candidate": 487155492113.9,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2014-02",
+      "anchor": 114.479,
+      "candidate": 506753856442.84,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2014-03",
+      "anchor": 242.069,
+      "candidate": 525278162759.33,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2014-04",
+      "anchor": 208.222,
+      "candidate": 465208046019.42,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2014-05",
+      "anchor": 164.726,
+      "candidate": 415189306856.32,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2014-06",
+      "anchor": 339.481,
+      "candidate": 427503374757.32,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2014-07",
+      "anchor": 156.374,
+      "candidate": 402585308679.09,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2014-08",
+      "anchor": 172.59,
+      "candidate": 400472975041.13,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2014-09",
+      "anchor": 300.0,
+      "candidate": 446312087412.93,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2014-10",
+      "anchor": 186.282,
+      "candidate": 426877867571.76,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2014-11",
+      "anchor": 173.91,
+      "candidate": 422881320878.55,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2014-12",
+      "anchor": 171.12,
+      "candidate": 484687205957.11,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2015-01",
+      "anchor": 190.842,
+      "candidate": 446874315005.69,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2015-02",
+      "anchor": 155.001,
+      "candidate": 435152901750.27,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2015-03",
+      "anchor": 202.235,
+      "candidate": 508715372717.85,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2015-04",
+      "anchor": 130.464,
+      "candidate": 454016371670.46,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2015-05",
+      "anchor": 160.201,
+      "candidate": 442213233408.86,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2015-06",
+      "anchor": 192.602,
+      "candidate": 444513277520.44,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2015-07",
+      "anchor": 131.978,
+      "candidate": 451791526816.32,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2015-08",
+      "anchor": 149.694,
+      "candidate": 457720514590.26,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2015-09",
+      "anchor": 199.614,
+      "candidate": 435737873275.54,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2015-10",
+      "anchor": 225.326,
+      "candidate": 444354976465.47,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2015-11",
+      "anchor": 139.594,
+      "candidate": 564666706403.59,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2015-12",
+      "anchor": 474.591,
+      "candidate": 530478641660.15,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2016-01",
+      "anchor": 114.573,
+      "candidate": 520301265001.58,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2016-02",
+      "anchor": 94.123,
+      "candidate": 562868816834.46,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2016-03",
+      "anchor": 303.849,
+      "candidate": 605797428333.45,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2016-04",
+      "anchor": 65.558,
+      "candidate": 561748405823.09,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2016-05",
+      "anchor": 102.627,
+      "candidate": 559874655573.4,
+      "rolling_corr_36m": null
+    },
+    {
+      "month": "2016-06",
+      "anchor": 278.809,
+      "candidate": 558082085554.33,
+      "rolling_corr_36m": -0.09008364204049825
+    },
+    {
+      "month": "2016-07",
+      "anchor": 110.518,
+      "candidate": 589715364359.53,
+      "rolling_corr_36m": -0.1160290625200365
+    },
+    {
+      "month": "2016-08",
+      "anchor": 171.368,
+      "candidate": 674317145419.17,
+      "rolling_corr_36m": -0.08417091674235286
+    },
+    {
+      "month": "2016-09",
+      "anchor": 412.523,
+      "candidate": 709130616564.69,
+      "rolling_corr_36m": 0.1481484888633758
+    },
+    {
+      "month": "2016-10",
+      "anchor": 214.798,
+      "candidate": 825479492487.21,
+      "rolling_corr_36m": 0.15853285551042823
+    },
+    {
+      "month": "2016-11",
+      "anchor": 208.524,
+      "candidate": 921101411087.97,
+      "rolling_corr_36m": 0.15554806582290537
+    },
+    {
+      "month": "2016-12",
+      "anchor": 468.355,
+      "candidate": 850976630143.71,
+      "rolling_corr_36m": 0.32682829645520983
+    },
+    {
+      "month": "2017-01",
+      "anchor": 180.162,
+      "candidate": 811087255047.74,
+      "rolling_corr_36m": 0.288548188053693
+    },
+    {
+      "month": "2017-02",
+      "anchor": 204.651,
+      "candidate": 781154320133.53,
+      "rolling_corr_36m": 0.2739966126496739
+    },
+    {
+      "month": "2017-03",
+      "anchor": 346.853,
+      "candidate": 786773888511.26,
+      "rolling_corr_36m": 0.32385042006667636
+    },
+    {
+      "month": "2017-04",
+      "anchor": 181.976,
+      "candidate": 716669861842.39,
+      "rolling_corr_36m": 0.31147418233801927
+    },
+    {
+      "month": "2017-05",
+      "anchor": 256.176,
+      "candidate": 691940218619.28,
+      "rolling_corr_36m": 0.3116294333239991
+    },
+    {
+      "month": "2017-06",
+      "anchor": 398.875,
+      "candidate": 662297048571.05,
+      "rolling_corr_36m": 0.3738310661101392
+    },
+    {
+      "month": "2017-07",
+      "anchor": 204.622,
+      "candidate": 706158401290.08,
+      "rolling_corr_36m": 0.3578924247894382
+    },
+    {
+      "month": "2017-08",
+      "anchor": 213.486,
+      "candidate": 667594161958.54,
+      "rolling_corr_36m": 0.35033866993461166
+    },
+    {
+      "month": "2017-09",
+      "anchor": 316.09,
+      "candidate": 695019419342.75,
+      "rolling_corr_36m": 0.3967792359610307
+    },
+    {
+      "month": "2017-10",
+      "anchor": 173.605,
+      "candidate": 762797998351.65,
+      "rolling_corr_36m": 0.37415982464768577
+    },
+    {
+      "month": "2017-11",
+      "anchor": 102.719,
+      "candidate": 761125319515.38,
+      "rolling_corr_36m": 0.323948847804206
+    },
+    {
+      "month": "2017-12",
+      "anchor": 319.595,
+      "candidate": 756196450061.1,
+      "rolling_corr_36m": 0.3368162051189247
+    },
+    {
+      "month": "2018-01",
+      "anchor": 65.797,
+      "candidate": 748990330659.89,
+      "rolling_corr_36m": 0.2879983785451094
+    },
+    {
+      "month": "2018-02",
+      "anchor": 44.51,
+      "candidate": 855586871742.77,
+      "rolling_corr_36m": 0.18894773177243512
+    },
+    {
+      "month": "2018-03",
+      "anchor": 17.898,
+      "candidate": 951187821286.6,
+      "rolling_corr_36m": 0.07421283506217308
+    },
+    {
+      "month": "2018-04",
+      "anchor": 13.83,
+      "candidate": 844133655265.85,
+      "rolling_corr_36m": -0.009809124073220769
+    },
+    {
+      "month": "2018-05",
+      "anchor": 21.475,
+      "candidate": 795908202872.97,
+      "rolling_corr_36m": -0.06121998184813085
+    },
+    {
+      "month": "2018-06",
+      "anchor": 96.97,
+      "candidate": 788105172578.73,
+      "rolling_corr_36m": -0.08216325433846415
+    },
+    {
+      "month": "2018-07",
+      "anchor": 9.045,
+      "candidate": 829993575940.88,
+      "rolling_corr_36m": -0.14972045676340626
+    },
+    {
+      "month": "2018-08",
+      "anchor": 0.39,
+      "candidate": 855236827121.77,
+      "rolling_corr_36m": -0.21436593246846242
+    },
+    {
+      "month": "2018-09",
+      "anchor": 48.43,
+      "candidate": 827321410154.57,
+      "rolling_corr_36m": -0.24363504384361906
+    },
+    {
+      "month": "2018-10",
+      "anchor": 4.815,
+      "candidate": 845996660530.06,
+      "rolling_corr_36m": -0.269475393369389
+    },
+    {
+      "month": "2018-11",
+      "anchor": 2.49,
+      "candidate": 880623939325.43,
+      "rolling_corr_36m": -0.32110834636697827
+    },
+    {
+      "month": "2018-12",
+      "anchor": 41.848,
+      "candidate": 945064272541.95,
+      "rolling_corr_36m": -0.26896713612315776
+    },
+    {
+      "month": "2019-01",
+      "anchor": 1.051,
+      "candidate": 851751443493.83,
+      "rolling_corr_36m": -0.3278226822690279
+    },
+    {
+      "month": "2019-02",
+      "anchor": 3.415,
+      "candidate": 918036294209.3,
+      "rolling_corr_36m": -0.3992904095161028
+    },
+    {
+      "month": "2019-03",
+      "anchor": 0.731,
+      "candidate": 1010338320494.88,
+      "rolling_corr_36m": -0.40611985558497715
+    },
+    {
+      "month": "2019-04",
+      "anchor": 0.015,
+      "candidate": 855264086104.9,
+      "rolling_corr_36m": -0.47792981497169934
+    },
+    {
+      "month": "2019-05",
+      "anchor": 0.855,
+      "candidate": 850724702486.26,
+      "rolling_corr_36m": -0.5401880466319923
+    },
+    {
+      "month": "2019-06",
+      "anchor": 44.307,
+      "candidate": 829280723956.1,
+      "rolling_corr_36m": -0.525093379097783
+    },
+    {
+      "month": "2019-07",
+      "anchor": 7.367,
+      "candidate": 825306121803.25,
+      "rolling_corr_36m": -0.5829526790815343
+    },
+    {
+      "month": "2019-08",
+      "anchor": 12.089,
+      "candidate": 916645472757.78,
+      "rolling_corr_36m": -0.6036846353049647
+    },
+    {
+      "month": "2019-09",
+      "anchor": 7.057,
+      "candidate": 1048003733480.62,
+      "rolling_corr_36m": -0.5779410464490934
+    },
+    {
+      "month": "2019-10",
+      "anchor": 2.851,
+      "candidate": 1081318684563.93,
+      "rolling_corr_36m": -0.5815300144538877
+    },
+    {
+      "month": "2019-11",
+      "anchor": 0.75,
+      "candidate": 1137046088382.99,
+      "rolling_corr_36m": -0.6011146686504364
+    },
+    {
+      "month": "2019-12",
+      "anchor": 64.087,
+      "candidate": 1122603388208.99,
+      "rolling_corr_36m": -0.6520621436119473
+    },
+    {
+      "month": "2020-01",
+      "anchor": 4.5,
+      "candidate": 1037794290786.44,
+      "rolling_corr_36m": -0.6570971174075447
+    },
+    {
+      "month": "2020-02",
+      "anchor": 2.187,
+      "candidate": 1046673101189.94,
+      "rolling_corr_36m": -0.657891791914672
+    },
+    {
+      "month": "2020-03",
+      "anchor": 284.908,
+      "candidate": 1358742344049.27,
+      "rolling_corr_36m": -0.37376483796404325
+    },
+    {
+      "month": "2020-04",
+      "anchor": 1.775,
+      "candidate": 2147986116430.39,
+      "rolling_corr_36m": -0.29887714486112144
+    },
+    {
+      "month": "2020-05",
+      "anchor": 1.325,
+      "candidate": 2504556707340.08,
+      "rolling_corr_36m": -0.26617761465065415
+    },
+    {
+      "month": "2020-06",
+      "anchor": 0.95,
+      "candidate": 2565675666180.36,
+      "rolling_corr_36m": -0.24596835955433724
+    },
+    {
+      "month": "2020-07",
+      "anchor": 0.15,
+      "candidate": 2482850689268.74,
+      "rolling_corr_36m": -0.24394543980426064
+    },
+    {
+      "month": "2020-08",
+      "anchor": 0.011,
+      "candidate": 2485825175636.76,
+      "rolling_corr_36m": -0.23390863630810044
+    },
+    {
+      "month": "2020-09",
+      "anchor": 0.85,
+      "candidate": 2494381729339.58,
+      "rolling_corr_36m": -0.21406285494229702
+    },
+    {
+      "month": "2020-10",
+      "anchor": 0.001,
+      "candidate": 2443123208072.64,
+      "rolling_corr_36m": -0.20463648138728072
+    },
+    {
+      "month": "2020-11",
+      "anchor": 0.006,
+      "candidate": 2458503095131.18,
+      "rolling_corr_36m": -0.20212776126940227
+    },
+    {
+      "month": "2020-12",
+      "anchor": 9.651,
+      "candidate": 2470097624676.91,
+      "rolling_corr_36m": -0.16129110780966172
+    },
+    {
+      "month": "2021-01",
+      "anchor": 7.1,
+      "candidate": 2488202921652.94,
+      "rolling_corr_36m": -0.15118919311944212
+    },
+    {
+      "month": "2021-02",
+      "anchor": 11.2,
+      "candidate": 2447761973065.97,
+      "rolling_corr_36m": -0.14601478169373275
+    },
+    {
+      "month": "2021-03",
+      "anchor": 134.307,
+      "candidate": 2587376593277.34,
+      "rolling_corr_36m": -0.03956785235402424
+    },
+    {
+      "month": "2021-04",
+      "anchor": 183.234,
+      "candidate": 2567055604715.82,
+      "rolling_corr_36m": 0.06960301932207964
+    },
+    {
+      "month": "2021-05",
+      "anchor": 479.498,
+      "candidate": 2427389333848.92,
+      "rolling_corr_36m": 0.19731966522570119
+    },
+    {
+      "month": "2021-06",
+      "anchor": 991.939,
+      "candidate": 2292291387744.36,
+      "rolling_corr_36m": 0.24829340415208911
+    },
+    {
+      "month": "2021-07",
+      "anchor": 1039.394,
+      "candidate": 2071589393629.61,
+      "rolling_corr_36m": 0.25022127761946383
+    },
+    {
+      "month": "2021-08",
+      "anchor": 1189.616,
+      "candidate": 1962034453991.64,
+      "rolling_corr_36m": 0.23791081992305294
+    },
+    {
+      "month": "2021-09",
+      "anchor": 1604.881,
+      "candidate": 1698843595559.96,
+      "rolling_corr_36m": 0.18632203393612382
+    },
+    {
+      "month": "2021-10",
+      "anchor": 1502.296,
+      "candidate": 1846684183251.46,
+      "rolling_corr_36m": 0.17054039120301484
+    },
+    {
+      "month": "2021-11",
+      "anchor": 1517.956,
+      "candidate": 1801909649826.68,
+      "rolling_corr_36m": 0.15083169121401557
+    },
+    {
+      "month": "2021-12",
+      "anchor": 1904.582,
+      "candidate": 1821943219261.6,
+      "rolling_corr_36m": 0.13116418483075296
+    },
+    {
+      "month": "2022-01",
+      "anchor": 1654.85,
+      "candidate": 1862466277158.27,
+      "rolling_corr_36m": 0.11396907706949816
+    },
+    {
+      "month": "2022-02",
+      "anchor": 1596.052,
+      "candidate": 1843857762697.82,
+      "rolling_corr_36m": 0.09361404601398833
+    },
+    {
+      "month": "2022-03",
+      "anchor": 1871.97,
+      "candidate": 1766002670983.52,
+      "rolling_corr_36m": 0.06328125672011625
+    },
+    {
+      "month": "2022-04",
+      "anchor": 1906.802,
+      "candidate": 1674344566473.14,
+      "rolling_corr_36m": 0.017608100260318043
+    },
+    {
+      "month": "2022-05",
+      "anchor": 1978.538,
+      "candidate": 1539049172962.13,
+      "rolling_corr_36m": -0.04501198541593354
+    },
+    {
+      "month": "2022-06",
+      "anchor": 2329.743,
+      "candidate": 1465560453891.34,
+      "rolling_corr_36m": -0.12233625890482094
+    },
+    {
+      "month": "2022-07",
+      "anchor": 2300.2,
+      "candidate": 1432853544817.37,
+      "rolling_corr_36m": -0.20925387315023505
+    },
+    {
+      "month": "2022-08",
+      "anchor": 2251.025,
+      "candidate": 1349594770596.38,
+      "rolling_corr_36m": -0.3022747450966894
+    },
+    {
+      "month": "2022-09",
+      "anchor": 2425.91,
+      "candidate": 1262909156347.91,
+      "rolling_corr_36m": -0.3991401583175273
+    },
+    {
+      "month": "2022-10",
+      "anchor": 2275.459,
+      "candidate": 1221480784455.61,
+      "rolling_corr_36m": -0.49447120962837615
+    },
+    {
+      "month": "2022-11",
+      "anchor": 2115.913,
+      "candidate": 1170800340960.66,
+      "rolling_corr_36m": -0.5847926631569422
+    },
+    {
+      "month": "2022-12",
+      "anchor": 2553.716,
+      "candidate": 1067387400714.78,
+      "rolling_corr_36m": -0.6837853587764456
+    },
+    {
+      "month": "2023-01",
+      "anchor": 2061.572,
+      "candidate": 1047540763871.96,
+      "rolling_corr_36m": -0.7863136872118254
+    },
+    {
+      "month": "2023-02",
+      "anchor": 2188.035,
+      "candidate": 1005985586980.34,
+      "rolling_corr_36m": -0.8930288270720035
+    },
+    {
+      "month": "2023-03",
+      "anchor": 2375.171,
+      "candidate": 1040799206512.71,
+      "rolling_corr_36m": -0.947324117335126
+    },
+    {
+      "month": "2023-04",
+      "anchor": 2325.479,
+      "candidate": 998684500841.71,
+      "rolling_corr_36m": -0.9542249491919572
+    },
+    {
+      "month": "2023-05",
+      "anchor": 2254.859,
+      "candidate": 886051668193.02,
+      "rolling_corr_36m": -0.948201377415033
+    },
+    {
+      "month": "2023-06",
+      "anchor": 2034.319,
+      "candidate": 1243662598118.06,
+      "rolling_corr_36m": -0.9456189870073118
+    },
+    {
+      "month": "2023-07",
+      "anchor": 1821.124,
+      "candidate": 1420126879417.98,
+      "rolling_corr_36m": -0.9435367588493879
+    },
+    {
+      "month": "2023-08",
+      "anchor": 1651.602,
+      "candidate": 1597055423461.3,
+      "rolling_corr_36m": -0.9411168028401757
+    },
+    {
+      "month": "2023-09",
+      "anchor": 1557.569,
+      "candidate": 1767115264064.9,
+      "rolling_corr_36m": -0.9377428922108131
+    },
+    {
+      "month": "2023-10",
+      "anchor": 1137.697,
+      "candidate": 1951879939642.43,
+      "rolling_corr_36m": -0.9361120385906034
+    },
+    {
+      "month": "2023-11",
+      "anchor": 887.822,
+      "candidate": 2198638375663.4,
+      "rolling_corr_36m": -0.935130126575375
+    },
+    {
+      "month": "2023-12",
+      "anchor": 1018.483,
+      "candidate": 2269524234465.33,
+      "rolling_corr_36m": -0.9324484615783127
+    },
+    {
+      "month": "2024-01",
+      "anchor": 615.379,
+      "candidate": 2382211817166.49,
+      "rolling_corr_36m": -0.9343119634659012
+    },
+    {
+      "month": "2024-02",
+      "anchor": 502.074,
+      "candidate": 2577951755431.55,
+      "rolling_corr_36m": -0.9414826255527049
+    },
+    {
+      "month": "2024-03",
+      "anchor": 594.428,
+      "candidate": 2563675159280.19,
+      "rolling_corr_36m": -0.9417412959379355
+    },
+    {
+      "month": "2024-04",
+      "anchor": 534.234,
+      "candidate": 2415159485578.45,
+      "rolling_corr_36m": -0.9417517145369292
+    },
+    {
+      "month": "2024-05",
+      "anchor": 439.806,
+      "candidate": 2466811369530.12,
+      "rolling_corr_36m": -0.9423131549059515
+    },
+    {
+      "month": "2024-06",
+      "anchor": 664.57,
+      "candidate": 2450017204259.31,
+      "rolling_corr_36m": -0.944590411595256
+    },
+    {
+      "month": "2024-07",
+      "anchor": 413.2,
+      "candidate": 2485201882021.79,
+      "rolling_corr_36m": -0.9471374045469318
+    },
+    {
+      "month": "2024-08",
+      "anchor": 433.13,
+      "candidate": 2567653662066.83,
+      "rolling_corr_36m": -0.9509325329807886
+    },
+    {
+      "month": "2024-09",
+      "anchor": 465.638,
+      "candidate": 2659841476203.36,
+      "rolling_corr_36m": -0.9543285440066203
+    },
+    {
+      "month": "2024-10",
+      "anchor": 201.278,
+      "candidate": 2877644897592.7,
+      "rolling_corr_36m": -0.958589095382419
+    },
+    {
+      "month": "2024-11",
+      "anchor": 197.627,
+      "candidate": 3064571819081.13,
+      "rolling_corr_36m": -0.9605281175609094
+    },
+    {
+      "month": "2024-12",
+      "anchor": 473.46,
+      "candidate": 2994850898348.32,
+      "rolling_corr_36m": -0.9624797087566972
+    },
+    {
+      "month": "2025-01",
+      "anchor": 187.913,
+      "candidate": 3084727117334.64,
+      "rolling_corr_36m": -0.9651441712035004
+    },
+    {
+      "month": "2025-02",
+      "anchor": 234.422,
+      "candidate": 2967062533232.54,
+      "rolling_corr_36m": -0.9672179560927667
+    },
+    {
+      "month": "2025-03",
+      "anchor": 399.167,
+      "candidate": 2880571039315.09,
+      "rolling_corr_36m": -0.96981679415071
+    },
+    {
+      "month": "2025-04",
+      "anchor": 250.601,
+      "candidate": 2714434149925.82,
+      "rolling_corr_36m": -0.9714477892531379
+    },
+    {
+      "month": "2025-05",
+      "anchor": 315.657,
+      "candidate": 2699639572906.9,
+      "rolling_corr_36m": -0.9722982160538947
+    },
+    {
+      "month": "2025-06",
+      "anchor": 460.731,
+      "candidate": 2614033639413.29,
+      "rolling_corr_36m": -0.9759785809532819
+    },
+    {
+      "month": "2025-07",
+      "anchor": 214.445,
+      "candidate": 2732418373648.63,
+      "rolling_corr_36m": -0.9787508908009865
+    },
+    {
+      "month": "2025-08",
+      "anchor": 77.898,
+      "candidate": 3148633533137.18,
+      "rolling_corr_36m": -0.979956408771552
+    },
+    {
+      "month": "2025-09",
+      "anchor": 49.071,
+      "candidate": 3232354426545.6,
+      "rolling_corr_36m": -0.9819284296456122
+    },
+    {
+      "month": "2025-10",
+      "anchor": 51.802,
+      "candidate": 3405963676794.02,
+      "rolling_corr_36m": -0.9798844995841273
+    },
+    {
+      "month": "2025-11",
+      "anchor": 7.561,
+      "candidate": 3472653670690.66,
+      "rolling_corr_36m": -0.9767729886768358
+    },
+    {
+      "month": "2025-12",
+      "anchor": 105.993,
+      "candidate": 3517831988034.62,
+      "rolling_corr_36m": -0.9740015901768488
+    },
+    {
+      "month": "2026-01",
+      "anchor": 9.629,
+      "candidate": 3375778656905.79,
+      "rolling_corr_36m": -0.971889882474468
+    },
+    {
+      "month": "2026-02",
+      "anchor": 16.318,
+      "candidate": 3406753492452.71,
+      "rolling_corr_36m": -0.9683033431536119
+    },
+    {
+      "month": "2026-03",
+      "anchor": 15.782,
+      "candidate": 3426437522512.93,
+      "rolling_corr_36m": -0.9650963708399874
+    }
+  ]
+}

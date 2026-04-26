@@ -164,6 +164,11 @@ export const SECTIONS = [
   { id: "dash_investor_group",   label: "",  x: 754, y: 699, w: 548, h: 231,style: "dashed_gray", level: 4, endpoints: buildSectionEndpoints(754, 699, 548, 231) },
   // Box 4: FHLB(753±110) + GSEs(1028±110) — hexagon rx=110, ry=38
   { id: "dash_gse_pair",         label: "",  x: 621, y: 1007,w: 539, h: 116,style: "dashed_gray", level: 4, endpoints: buildSectionEndpoints(621, 1007, 539, 116) },
+  // Liabilities-side hierarchy wrappers (visual grouping for parent + indented sub-items)
+  // Wrapper 1: bs_rrp(360) + bs_rrp_omo(430) + bs_foreign_repo(500) — covers y=325..525
+  { id: "dash_rrp_group",        label: "",  x: 250, y: 325, w: 210, h: 200, style: "dashed_gray", level: 4, endpoints: buildSectionEndpoints(250, 325, 210, 200) },
+  // Wrapper 2: bs_other_liab(570) + bs_tga(640) + bs_fhlb_deposits(710) — covers y=540..740 (15px gap to wrapper 1)
+  { id: "dash_other_liab_group", label: "",  x: 250, y: 540, w: 210, h: 200, style: "dashed_gray", level: 4, endpoints: buildSectionEndpoints(250, 540, 210, 200) },
   { id: "gov_entities",     label: "U.S. Government Entities",    x: 575,  y: 965,  w: 905,  h: 230,  style: "group", level: 3, endpoints: buildSectionEndpoints(575, 965, 905, 230) },
   // Offshore sub-groups — wraps 3 nodes: Foreign Insurers(y=350), Foreign Banks(y=560), Corporates(y=785)
   { id: "offshore_investors", label: "",  x: 1560, y: 300, w: 240, h: 535, style: "dashed_gray", level: 3, endpoints: buildSectionEndpoints(1560, 300, 240, 535) },
@@ -195,14 +200,14 @@ export const NODES = [
   // ── Balance Sheet — Liabilities (负债端, 右列) ───────────────────────
   { id: "bs_reserve_balances", label: "Reserve Balances (from depository institutions)",  x: 355,  y: 220,  shape: "bs_parent", group: "bs_liabilities" },
   { id: "bs_fed_notes",        label: "Federal Reserve Notes (currency in circulation)",  x: 355,  y: 290,  shape: "bs_parent", group: "bs_liabilities" },
-  // RRP — group parent + children
+  // RRP — flat group (parent + indented sub-items, wrapped by dash_rrp_group)
   { id: "bs_rrp",              label: "Reverse Repurchase Agreements",                    x: 355,  y: 360,  shape: "bs_parent", group: "bs_liabilities" },
-  { id: "bs_rrp_omo",          label: "Open market operations",                           x: 372,  y: 425,  shape: "bs_child",  group: "bs_liabilities", parentId: "bs_rrp" },
-  { id: "bs_foreign_repo",     label: "Foreign repo pool",                                 x: 372,  y: 485,  shape: "bs_child",  group: "bs_liabilities", parentId: "bs_rrp" },
-  // Other Liabilities — group parent + children
-  { id: "bs_other_liab",       label: "Other Liabilities",                                x: 355,  y: 430,  shape: "bs_parent", group: "bs_liabilities" },
-  { id: "bs_tga",             label: "U.S. Treasury General Account (TGA)",             x: 372,  y: 495,  shape: "bs_child",  group: "bs_liabilities", parentId: "bs_other_liab" },
-  { id: "bs_fhlb_deposits",    label: "FHLB, DFMU, and other deposits",                   x: 372,  y: 555,  shape: "bs_child",  group: "bs_liabilities", parentId: "bs_other_liab" },
+  { id: "bs_rrp_omo",          label: "Open market operations",                           x: 355,  y: 430,  shape: "bs_parent", group: "bs_liabilities", parentId: "bs_rrp",        indent: true },
+  { id: "bs_foreign_repo",     label: "Foreign repo pool",                                 x: 355,  y: 500,  shape: "bs_parent", group: "bs_liabilities", parentId: "bs_rrp",        indent: true },
+  // Other Liabilities — flat group (parent + indented sub-items, wrapped by dash_other_liab_group)
+  { id: "bs_other_liab",       label: "Other Liabilities",                                x: 355,  y: 570,  shape: "bs_parent", group: "bs_liabilities" },
+  { id: "bs_tga",              label: "U.S. Treasury General Account (TGA)",              x: 355,  y: 640,  shape: "bs_parent", group: "bs_liabilities", parentId: "bs_other_liab", indent: true },
+  { id: "bs_fhlb_deposits",    label: "FHLB, DFMU, and other deposits",                   x: 355,  y: 710,  shape: "bs_parent", group: "bs_liabilities", parentId: "bs_other_liab", indent: true },
 
   // ════════════════════════════════════════════════════════════════════
   // RIGHT PANEL — U.S. DOLLAR FUNDING MARKET

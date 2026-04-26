@@ -174,11 +174,11 @@ app.js (入口)
 | **Balance Sheet — Liabilities** | `bs_reserve_balances` | Reserve Balances (from depository institutions) | bs_parent |
 | | `bs_fed_notes` | Federal Reserve Notes (currency in circulation) | bs_parent |
 | | `bs_rrp` | Reverse Repurchase Agreements | bs_parent |
-| | └ `bs_rrp_omo` | Open market operations | bs_child |
-| | └ `bs_foreign_repo` | Foreign repo pool | bs_child |
+| | `bs_rrp_omo` | • Open market operations | bs_parent (indent) |
+| | `bs_foreign_repo` | • Foreign repo pool | bs_parent (indent) |
 | | `bs_other_liab` | Other Liabilities | bs_parent |
-| | └ `bs_tga` | U.S. Treasury General Account (TGA) | bs_child |
-| | └ `bs_fhlb_deposits` | FHLB, DFMU, and other deposits | bs_child |
+| | `bs_tga` | • U.S. Treasury General Account (TGA) | bs_parent (indent) |
+| | `bs_fhlb_deposits` | • FHLB, DFMU, and other deposits | bs_parent (indent) |
 | **Banks and Dealers** | `us_banks` | U.S. Banks | 六边形 |
 | | `us_fbo` | U.S. Branches of Foreign Banks | 六边形 |
 | | `dealers` | Dealers | 六边形 |

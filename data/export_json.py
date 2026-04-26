@@ -12,7 +12,7 @@ import json
 import sqlite3
 from pathlib import Path
 
-from series_config import FRED_SERIES
+from series_config import FRED_SERIES, FRED_SERIES_V2
 
 DB_PATH = Path(__file__).resolve().parent / "funding_flows.db"
 OUT_DIR = Path(__file__).resolve().parent / "json"
@@ -36,8 +36,15 @@ def export():
 
     dates = quarter_end_dates()
 
-    # Fetch all observations ordered by date
-    all_series_ids = list(FRED_SERIES.keys())
+    # Fetch all observations ordered by date.
+    # S4.1 (R008 unblock): include FRED_SERIES_V2 keys so v2 proxy badges
+    # can resolve `MBST` / `CURRCIR` / `H8B1058NCBCMG` (and other v2 series
+    # like `WTREGEN`) via the same time_series.json that v2 dataLoader reads.
+    # v1 visuals are unaffected because v1 only references series listed in
+    # `js/constants.js`, which does not contain any FRED_SERIES_V2 ids.
+    all_series_ids = list(FRED_SERIES.keys()) + [
+        sid for sid in FRED_SERIES_V2.keys() if sid not in FRED_SERIES
+    ]
 
     # Build as-of lookup: for each series+quarter_end, find latest obs <= date
     time_series = {}
@@ -63,6 +70,22 @@ def export():
     for sid, meta in FRED_SERIES.items():
         tt = meta.get("transaction_type")
         # Normalize to list for JSON output if it's a single string
+        if isinstance(tt, str):
+            tt = [tt]
+        metadata[sid] = {
+            "name": meta["name"],
+            "units": meta["units"],
+            "frequency": meta["frequency"],
+            "transaction_type": tt,
+            "node_ids": meta["node_ids"],
+        }
+    # Additive: also expose FRED_SERIES_V2 metadata so v2 badges can render
+    # units / frequency / name without a separate fetch. v1 ignores these
+    # entries (its lookups are keyed on series IDs from js/constants.js).
+    for sid, meta in FRED_SERIES_V2.items():
+        if sid in metadata:
+            continue
+        tt = meta.get("transaction_type")
         if isinstance(tt, str):
             tt = [tt]
         metadata[sid] = {

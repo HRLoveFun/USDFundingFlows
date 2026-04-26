@@ -1,0 +1,15 @@
+{
+  "node_id": "corporates_offshore",
+  "candidate": null,
+  "anchor": null,
+  "self_anchored": false,
+  "anchor_rationale": null,
+  "window": "36M_monthly",
+  "corr_36m": null,
+  "corr_full_sample": null,
+  "sample_months": 0,
+  "start_date": null,
+  "end_date": null,
+  "note": "permanent-not_found (D-001): offshore-USD corporate cash management is not publicly disclosed.",
+  "monthly_pairs": []
+}

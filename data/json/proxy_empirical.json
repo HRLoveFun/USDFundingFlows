@@ -1,0 +1,231 @@
+{
+  "bs_agency_mbs": {
+    "corr_36m": 1.0,
+    "corr_full_sample": 1.0,
+    "chart_path": "data/json/proxy_charts/bs_agency_mbs.json",
+    "last_updated": "2026-04-26",
+    "sample_months": 66,
+    "note": "self-anchored: candidate IS the directly observed concept (no independent public benchmark exists)"
+  },
+  "bs_cb_swaps": {
+    "corr_36m": 1.0,
+    "corr_full_sample": 1.0,
+    "chart_path": "data/json/proxy_charts/bs_cb_swaps.json",
+    "last_updated": "2026-04-26",
+    "sample_months": 160,
+    "note": "self-anchored: candidate IS the directly observed concept (no independent public benchmark exists)"
+  },
+  "bs_fed_notes": {
+    "corr_36m": 1.0,
+    "corr_full_sample": 1.0,
+    "chart_path": "data/json/proxy_charts/bs_fed_notes.json",
+    "last_updated": "2026-04-26",
+    "sample_months": 154,
+    "note": "self-anchored: candidate IS the directly observed concept (no independent public benchmark exists)"
+  },
+  "bs_fhlb_deposits": {
+    "corr_36m": null,
+    "chart_path": "data/json/proxy_charts/bs_fhlb_deposits.json",
+    "last_updated": "2026-04-26",
+    "sample_months": 0,
+    "note": "pending-S2.4: external whitelist source not yet implemented"
+  },
+  "bs_foreign_repo": {
+    "corr_36m": 1.0,
+    "corr_full_sample": 1.0,
+    "chart_path": "data/json/proxy_charts/bs_foreign_repo.json",
+    "last_updated": "2026-04-26",
+    "sample_months": 160,
+    "note": "self-anchored: candidate IS the directly observed concept (no independent public benchmark exists)"
+  },
+  "bs_foreign_reserves": {
+    "corr_36m": null,
+    "chart_path": "data/json/proxy_charts/bs_foreign_reserves.json",
+    "last_updated": "2026-04-26",
+    "sample_months": 0,
+    "note": "pending-S2.4: external whitelist source not yet implemented"
+  },
+  "bs_other_liab": {
+    "corr_36m": null,
+    "chart_path": "data/json/proxy_charts/bs_other_liab.json",
+    "last_updated": "2026-04-26",
+    "sample_months": 0,
+    "note": "pending-S2.4: external whitelist source not yet implemented"
+  },
+  "bs_others_assets": {
+    "corr_36m": null,
+    "chart_path": "data/json/proxy_charts/bs_others_assets.json",
+    "last_updated": "2026-04-26",
+    "sample_months": 0,
+    "note": "pending-S2.4: external whitelist source not yet implemented"
+  },
+  "bs_primary_credit": {
+    "corr_36m": 1.0,
+    "corr_full_sample": 1.0,
+    "chart_path": "data/json/proxy_charts/bs_primary_credit.json",
+    "last_updated": "2026-04-26",
+    "sample_months": 160,
+    "note": "self-anchored: candidate IS the directly observed concept (no independent public benchmark exists)"
+  },
+  "bs_reserve_balances": {
+    "corr_36m": 0.42287689892179675,
+    "corr_full_sample": 0.8729656794245481,
+    "chart_path": "data/json/proxy_charts/bs_reserve_balances.json",
+    "last_updated": "2026-04-26",
+    "sample_months": 160,
+    "note": null
+  },
+  "bs_rrp": {
+    "corr_36m": 1.0000000000000004,
+    "corr_full_sample": 0.9999828663400542,
+    "chart_path": "data/json/proxy_charts/bs_rrp.json",
+    "last_updated": "2026-04-26",
+    "sample_months": 154,
+    "note": null
+  },
+  "bs_rrp_omo": {
+    "corr_36m": 1.0000000000000004,
+    "corr_full_sample": 0.9999828663400542,
+    "chart_path": "data/json/proxy_charts/bs_rrp_omo.json",
+    "last_updated": "2026-04-26",
+    "sample_months": 154,
+    "note": null
+  },
+  "bs_tga": {
+    "corr_36m": 0.9834092850276047,
+    "corr_full_sample": 0.9894480233179852,
+    "chart_path": "data/json/proxy_charts/bs_tga.json",
+    "last_updated": "2026-04-26",
+    "sample_months": 112,
+    "note": null
+  },
+  "bs_treasuries": {
+    "corr_36m": 1.0,
+    "corr_full_sample": 1.0,
+    "chart_path": "data/json/proxy_charts/bs_treasuries.json",
+    "last_updated": "2026-04-26",
+    "sample_months": 160,
+    "note": "self-anchored: candidate IS the directly observed concept (no independent public benchmark exists)"
+  },
+  "corporates_onshore": {
+    "corr_36m": 1.0,
+    "corr_full_sample": 1.0,
+    "chart_path": "data/json/proxy_charts/corporates_onshore.json",
+    "last_updated": "2026-04-26",
+    "sample_months": 160,
+    "note": "self-anchored: candidate IS the directly observed concept (no independent public benchmark exists)"
+  },
+  "dealers": {
+    "corr_36m": 1.0,
+    "corr_full_sample": 1.0,
+    "chart_path": "data/json/proxy_charts/dealers.json",
+    "last_updated": "2026-04-26",
+    "sample_months": 157,
+    "note": "self-anchored: candidate IS the directly observed concept (no independent public benchmark exists)"
+  },
+  "fcb_swf_supra_offshore": {
+    "corr_36m": 1.0,
+    "corr_full_sample": 1.0,
+    "chart_path": "data/json/proxy_charts/fcb_swf_supra_offshore.json",
+    "last_updated": "2026-04-26",
+    "sample_months": 160,
+    "note": "self-anchored: candidate IS the directly observed concept (no independent public benchmark exists)"
+  },
+  "fcb_swf_supra_onshore": {
+    "corr_36m": 1.0,
+    "corr_full_sample": 1.0,
+    "chart_path": "data/json/proxy_charts/fcb_swf_supra_onshore.json",
+    "last_updated": "2026-04-26",
+    "sample_months": 160,
+    "note": "self-anchored: candidate IS the directly observed concept (no independent public benchmark exists)"
+  },
+  "fhlb": {
+    "corr_36m": null,
+    "chart_path": "data/json/proxy_charts/fhlb.json",
+    "last_updated": "2026-04-26",
+    "sample_months": 0,
+    "note": "pending-S2.4: external whitelist source not yet implemented"
+  },
+  "foreign_banks": {
+    "corr_36m": null,
+    "chart_path": "data/json/proxy_charts/foreign_banks.json",
+    "last_updated": "2026-04-26",
+    "sample_months": 0,
+    "note": "pending-S2.4: external whitelist source not yet implemented"
+  },
+  "gov_mmf": {
+    "corr_36m": -0.9650963708399874,
+    "corr_full_sample": 0.04832340984878971,
+    "chart_path": "data/json/proxy_charts/gov_mmf.json",
+    "last_updated": "2026-04-26",
+    "sample_months": 153,
+    "note": null
+  },
+  "gse": {
+    "corr_36m": null,
+    "chart_path": "data/json/proxy_charts/gse.json",
+    "last_updated": "2026-04-26",
+    "sample_months": 0,
+    "note": "pending-S2.4: external whitelist source not yet implemented"
+  },
+  "hedge_funds": {
+    "corr_36m": 1.0,
+    "corr_full_sample": 1.0,
+    "chart_path": "data/json/proxy_charts/hedge_funds.json",
+    "last_updated": "2026-04-26",
+    "sample_months": 96,
+    "note": "self-anchored: candidate IS the directly observed concept (no independent public benchmark exists)"
+  },
+  "offshore_mmf": {
+    "corr_36m": null,
+    "chart_path": "data/json/proxy_charts/offshore_mmf.json",
+    "last_updated": "2026-04-26",
+    "sample_months": 0,
+    "note": "pending-S2.4: external whitelist source not yet implemented"
+  },
+  "prime_mmf": {
+    "corr_36m": 1.0,
+    "corr_full_sample": 1.0,
+    "chart_path": "data/json/proxy_charts/prime_mmf.json",
+    "last_updated": "2026-04-26",
+    "sample_months": 185,
+    "note": "self-anchored: candidate IS the directly observed concept (no independent public benchmark exists)"
+  },
+  "retail_investors": {
+    "corr_36m": null,
+    "chart_path": "data/json/proxy_charts/retail_investors.json",
+    "last_updated": "2026-04-26",
+    "sample_months": 0,
+    "note": "pending-S2.4: external whitelist source not yet implemented"
+  },
+  "securities_lenders": {
+    "corr_36m": null,
+    "chart_path": "data/json/proxy_charts/securities_lenders.json",
+    "last_updated": "2026-04-26",
+    "sample_months": 0,
+    "note": "pending-S2.4: external whitelist source not yet implemented"
+  },
+  "us_banks": {
+    "corr_36m": 1.0,
+    "corr_full_sample": 1.0,
+    "chart_path": "data/json/proxy_charts/us_banks.json",
+    "last_updated": "2026-04-26",
+    "sample_months": 160,
+    "note": "self-anchored: candidate IS the directly observed concept (no independent public benchmark exists)"
+  },
+  "us_fbo": {
+    "corr_36m": null,
+    "chart_path": "data/json/proxy_charts/us_fbo.json",
+    "last_updated": "2026-04-26",
+    "sample_months": 0,
+    "note": "pending-S2.4: external whitelist source not yet implemented"
+  },
+  "us_treasury": {
+    "corr_36m": 0.9834092850276047,
+    "corr_full_sample": 0.9894480233179852,
+    "chart_path": "data/json/proxy_charts/us_treasury.json",
+    "last_updated": "2026-04-26",
+    "sample_months": 112,
+    "note": null
+  }
+}

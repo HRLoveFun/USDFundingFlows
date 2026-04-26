@@ -22,6 +22,10 @@ import { renderProxyBadges } from "./badges.js";
 import { initTooltip, showNodeProxy, hideTooltip } from "./tooltip.js";
 import { NODES, EDGES, NODE_PROXIES } from "./constants.js";
 
+// S3.4: module-local rendering context so the sidebar time selector
+// can re-render badges without touching v1 DOM or re-fetching JSON.
+let _ctx = null;   // { badgeLayer, dataLoader, crossDiff, currentDate }
+
 /**
  * @param {SVGSVGElement} svgEl
  * @param {object}        dataLoader  v1 DataLoader (shared instance)
@@ -50,7 +54,33 @@ export function initDiagram(svgEl, dataLoader) {
     onNodeHover: (d, event) => showNodeProxy(d, event, dataLoader, NODE_PROXIES),
     onNodeOut:   () => hideTooltip(),
   });
-  renderProxyBadges(badgeLayer, NODES, dataLoader);
+
+  // Default to latest available date (S3.3 behavior preserved on startup).
+  const initialDate = dataLoader?.dates?.length
+    ? dataLoader.dates[dataLoader.dates.length - 1]
+    : null;
+  _ctx = { badgeLayer, dataLoader, crossDiff: null, currentDate: initialDate };
+
+  // S3.3: load cross-source diff async (failure-tolerant; badges still render
+  // without violation styling if the file is missing or fetch fails).
+  fetch("data/json/cross_source_diff.json")
+    .then((r) => (r.ok ? r.json() : null))
+    .catch(() => null)
+    .then((crossDiff) => {
+      if (!_ctx) return;
+      _ctx.crossDiff = crossDiff;
+      renderProxyBadges(_ctx.badgeLayer, NODES, _ctx.dataLoader, _ctx.crossDiff, _ctx.currentDate);
+    });
 
   initTooltip();
+}
+
+/**
+ * S3.4: re-render badges for `currentDate` (YYYY-MM-DD). No-op until
+ * `initDiagram` has run. Fast — same diff/dates already in memory.
+ */
+export function updateBadges(currentDate) {
+  if (!_ctx) return;
+  _ctx.currentDate = currentDate;
+  renderProxyBadges(_ctx.badgeLayer, NODES, _ctx.dataLoader, _ctx.crossDiff, currentDate);
 }

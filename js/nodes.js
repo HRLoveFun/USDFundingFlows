@@ -52,7 +52,8 @@ export function renderSections(layer) {
   const sectionOrder = ["fed", "bs", "market", "onshore", "offshore",
     "banks_dealers", "dash_banks_pair", "onshore_inv", "dash_mmf_row",
     "dash_investor_group", "gov_entities", "dash_gse_pair",
-    "institutional_investors", "offshore_investors"];
+    "institutional_investors", "offshore_investors",
+    "dash_rrp_group", "dash_other_liab_group"];
 
   const ordered = sectionOrder
     .map(id => SECTIONS.find(s => s.id === id))
@@ -252,11 +253,19 @@ export function renderNodes(layer, { onNodeHover, onNodeOut }) {
     const isBsParent = d.shape === "bs_parent";
     const isBsChild  = d.shape === "bs_child";
     const isBs       = isBsParent || isBsChild;
+    // Indented bs_parent sub-items (flattened from former bs_child) get a
+    // bullet-point prefix injected at render time to convey hierarchy,
+    // without polluting `d.label` (which tooltip & sidebar reuse verbatim).
+    const isIndented = isBs && d.indent === true;
+    const BULLET     = "\u2022 "; // "• "
 
     let lines;
     if (isBs) {
       const sz = d._size || SHAPE_SIZES[d.shape];
       lines = d._lines || autoWrapText(d.label, isBsChild ? 14 : 15, sz.width - 12);
+      if (isIndented && lines.length > 0) {
+        lines = [BULLET + lines[0], ...lines.slice(1)];
+      }
       // Dynamically resize rect height to fit wrapped text
       if (lines.length > 1) {
         const lineHeight = isBsChild ? 10 : 11;
