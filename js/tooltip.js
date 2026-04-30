@@ -58,7 +58,7 @@ export function initTooltip() {
   initSelectionTracker();
 }
 
-export function showNodeTooltip(node, event, values, metadata, formatValue) {
+export function showNodeTooltip(node, event) {
   // Suppress tooltip while user has an active text selection
   if (_hasSelection || isSelecting()) return;
 
@@ -67,7 +67,7 @@ export function showNodeTooltip(node, event, values, metadata, formatValue) {
   updateTooltip(html, event);
 }
 
-export function showEdgeTooltip(edge, event, values, metadata, formatValue) {
+export function showEdgeTooltip(edge, event) {
   // Suppress tooltip while user has an active text selection
   if (_hasSelection || isSelecting()) return;
 
@@ -119,8 +119,4 @@ function doHide() {
   cancelAnimationFrame(rafId);
   lastContent = "";
   tooltipEl?.classList.add("hidden");
-}
-
-function capitalize(s) {
-  return s.charAt(0).toUpperCase() + s.slice(1);
 }

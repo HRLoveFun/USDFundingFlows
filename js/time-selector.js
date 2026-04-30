@@ -7,7 +7,7 @@ import { TIMING } from "./config.js";
 
 const { SLIDER_DEBOUNCE_MS } = TIMING;
 
-export function initTimeSelector(container, dates, onChange) {
+export function initTimeSelector(container, dates, onChange = () => {}) {
   const wrapper = document.createElement("div");
   wrapper.className = "time-selector";
 
@@ -56,9 +56,6 @@ export function initTimeSelector(container, dates, onChange) {
   });
 
   container.appendChild(wrapper);
-
-  // Return current date
-  return dates[dates.length - 1];
 }
 
 function formatQuarter(dateStr) {

@@ -302,19 +302,6 @@ export function renderNodes(layer, { onNodeHover, onNodeOut }) {
     });
   });
 
-  // Data badge (updated later via updateNodeBadges)
-  g.append("text")
-    .attr("class", "node-badge")
-    .attr("x", 0)
-    .attr("y", d => {
-      const sz = d._size || SHAPE_SIZES[d.shape];
-      return (sz.radius || sz.ry || sz.height / 2 || 20) + 14;
-    })
-    .attr("text-anchor", "middle")
-    .attr("font-size", d => (d.shape === "bs_parent" || d.shape === "bs_child") ? "14px" : "16px")
-    .attr("fill", "#555")
-    .attr("pointer-events", "auto");
-
   // Note: hover events are now bound directly on .node-shape elements above,
   // NOT on the group — this prevents text selection from triggering mouseleave
   // and allows users to select-copy node labels without dismissing tooltips.
@@ -348,28 +335,3 @@ function resetHighlightAll(svgEl) {
   svg.selectAll(".dimmed").classed("dimmed", false);
 }
 
-/**
- * Update the small badge below each node with aggregate data.
- */
-export function updateNodeBadges(nodeGroup, values, formatValue) {
-  const badgeMap = {
-    us_banks:              { sid: null },
-    us_fbo:                { sid: "DPSFRIM027SBOG",    units: "Bil. USD" },
-    dealers:               { sid: "BOGZ1FL664090663Q", units: "Mil. USD" },
-    gov_mmf:               { sid: "BOGZ1FL634090033Q", units: "Mil. USD" },
-    prime_mmf:             { sid: "MMMFFAQ027S",       units: "Bil. USD" },
-    hedge_funds:           { sid: "BOGZ1FL622051003Q", units: "Mil. USD" },
-    corporates_onshore:    { sid: "COMPAPER",          units: "Bil. USD" },
-    fcb_swf_supra_onshore: { sid: "WSEFINTL1",         units: "Mil. USD" },
-    fhlb:                  { sid: "BOGZ1FL403069330Q", units: "Mil. USD" },
-    gse:                   { sid: "BOGZ1FL404090423Q", units: "Mil. USD" },
-    us_treasury:           { sid: "GFDEBTN",           units: "Mil. USD" },
-    bs_reserve_balances:   { sid: "WRESBAL",           units: "Mil. USD" },
-    bs_rrp:                { sid: "RRPONTTLD",         units: "Bil. USD" },
-    bs_foreign_repo:       { sid: "WDFOA",             units: "Mil. USD" },
-    bs_treasuries:         { sid: "TREAST",            units: "Mil. USD" },
-  };
-
-  nodeGroup.select(".node-badge")
-    .text("");
-}

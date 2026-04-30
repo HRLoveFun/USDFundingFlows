@@ -1,19 +1,18 @@
 /**
  * v2/tooltip.js — proxy-aware tooltip for the v2 diagram.
  *
- * Module C deliverable: hovering a v2 node / edge surfaces its proxy
- * record from `proxy_registry.js` and the latest value from the shared
- * data loader (when the proxy series exists in time_series.json).
+ * Hovering a v2 node surfaces its proxy record from `proxy_registry.js`
+ * and the latest value from the shared data loader (when the proxy
+ * series exists in time_series.json).
  *
  * Sources outside FRED (Treasury / NYFed / OFR / External) are shown
- * with their source label only; live value loading for those will be
- * wired by a follow-up pass once the v2 data layer is unified.
+ * with their source label only.
  *
  * Implementation notes:
  *   - Singleton DOM node `<div class="tooltip-v2 hidden">` appended to
  *     `<body>` on first init — independent from v1's tooltip.
- *   - `showNodeProxy` / `showEdgeProxy` accept a `dataLoader` so the
- *     tooltip can look up the latest series value lazily.
+ *   - `showNodeProxy` accepts a `dataLoader` so the tooltip can look up
+ *     the latest series value lazily.
  */
 
 let tooltipEl = null;
@@ -102,8 +101,7 @@ function renderStatus(proxy_status) {
  * @param {object} dataLoader      v1 DataLoader instance (optional)
  * @param {object} [proxyRegistry] NODE_PROXIES map (overrides node.proxy)
  */
-export function showNodeProxy(node, event, dataLoader, proxyRegistry) {
-  const el = initTooltip();
+export function showNodeProxy(node, event, dataLoader, proxyRegistry) {  const el = initTooltip();
   const proxy = proxyRegistry?.[node.id] ?? node.proxy ?? null;
   const title = `<div class="tt-title">${escape(node.label?.replace(/\n/g, " ") ?? node.id)}</div>`;
   if (!proxy) {
@@ -119,38 +117,6 @@ export function showNodeProxy(node, event, dataLoader, proxyRegistry) {
   el.classList.remove("hidden");
   positionTooltip(event);
 }
-
-/**
- * @param {object} edge            v2 EDGE record
- * @param {Event}  event           pointer event
- * @param {object} dataLoader      v1 DataLoader instance (optional)
- * @param {object} [proxyRegistry] EDGE_PROXIES map (overrides edge.proxy)
- */
-export function showEdgeProxy(edge, event, dataLoader, proxyRegistry) {
-  const el = initTooltip();
-  const proxy = proxyRegistry?.[edge.transaction_type] ?? edge.proxy ?? null;
-  const title = `<div class="tt-title">${escape(edge.label ?? edge.transaction_type ?? edge.id ?? "edge")}</div>`;
-  if (!proxy) {
-    el.innerHTML = title + `<div class="tt-row tt-muted">no proxy registered</div>`;
-  } else {
-    el.innerHTML =
-      title +
-      renderProxyLine("volume", proxy.volume_proxy, dataLoader) +
-      renderProxyLine("price",  proxy.price_proxy,  dataLoader) +
-      (proxy.counterparties_proxy
-        ? renderProxyLine("counterparties", proxy.counterparties_proxy, dataLoader)
-        : "") +
-      (proxy.rationale ? `<div class="tt-rationale">${escape(proxy.rationale)}</div>` : "") +
-      (proxy.fallback  ? `<div class="tt-rationale tt-muted">fallback: ${escape(proxy.fallback)}</div>` : "") +
-      renderStatus(proxy.proxy_status);
-  }
-  el.classList.remove("hidden");
-  positionTooltip(event);
-}
-
-// Backwards-compat aliases (placeholder names from the S2 stub)
-export const showNodeTooltip = showNodeProxy;
-export const showEdgeTooltip = showEdgeProxy;
 
 /**
  * Minimal hover tooltip for proxy-value badges (S3.2 + S3.3).

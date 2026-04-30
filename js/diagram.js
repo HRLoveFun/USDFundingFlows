@@ -1,13 +1,13 @@
 /**
  * diagram.js — SVG orchestrator.
  * Layered rendering: defs → sections → edges → nodes → labels.
- * Exports updateValues() and highlightTransactionType().
+ * Exports highlightTransactionType().
  */
-import { WIDTH, HEIGHT, EDGES, NODES } from "./constants.js";
-import { renderSections, renderNodes, updateNodeBadges } from "./nodes.js";
-import { renderEdges, updateEdgeLabels, defineMarkers } from "./edges.js";
+import { WIDTH, HEIGHT, EDGES } from "./constants.js";
+import { renderSections, renderNodes } from "./nodes.js";
+import { renderEdges, defineMarkers } from "./edges.js";
 
-let svg, edgeGroup, nodeGroup, zoomG;
+let svg, zoomG;
 let cachedEdgeSel, cachedNodeSel;
 
 export function render(container, { onNodeHover, onNodeOut, onEdgeHover, onEdgeOut }) {
@@ -45,23 +45,11 @@ export function render(container, { onNodeHover, onNodeOut, onEdgeHover, onEdgeO
   // Render sections (backgrounds, headers, annotations)
   renderSections(sectionLayer);
 
-  edgeGroup = renderEdges(edgeLayer, { onEdgeHover, onEdgeOut });
-  nodeGroup = renderNodes(nodeLayer, { onNodeHover, onNodeOut });
+  renderEdges(edgeLayer, { onEdgeHover, onEdgeOut });
+  renderNodes(nodeLayer, { onNodeHover, onNodeOut });
 
   cachedEdgeSel = svg.selectAll("g.edge");
   cachedNodeSel = svg.selectAll("g.node");
-}
-
-/**
- * Update all edge value labels and node badges for the given date.
- */
-export function updateValues(date, dataLoader) {
-  const values   = dataLoader.getValuesForDate(date);
-  const metadata = dataLoader.metadata;
-  const fmt      = dataLoader.formatValue;
-
-  updateEdgeLabels(edgeGroup, values, metadata, fmt);
-  updateNodeBadges(nodeGroup, values, fmt);
 }
 
 /**

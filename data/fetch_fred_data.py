@@ -1,6 +1,6 @@
 """
 Download all FRED series defined in series_config.py.
-Saves raw CSV-like data; build_database.py handles DB import.
+Saves raw JSON; build_database.py handles DB import.
 """
 import os
 import sys
@@ -21,74 +21,50 @@ if not FRED_API_KEY:
 
 fred = Fred(api_key=FRED_API_KEY)
 
-START_DATE = "2013-01-01"
-MIN_INTERVAL = 0.6          # 120 req/min FRED limit
-MAX_RETRIES = 3
-OUTPUT_DIR = Path(__file__).resolve().parent / "json"
+START_DATE   = "2013-01-01"
+MIN_INTERVAL = 0.6        # 120 req/min FRED limit
+MAX_RETRIES  = 3
+OUTPUT_DIR   = Path(__file__).resolve().parent / "json"
 OUTPUT_DIR.mkdir(exist_ok=True)
 
-results = {}
-failed = []
 
-for i, (series_id, meta) in enumerate(FRED_SERIES.items(), 1):
-    print(f"[{i}/{len(FRED_SERIES)}] Fetching {series_id} … ", end="", flush=True)
-    for attempt in range(1, MAX_RETRIES + 1):
-        try:
-            time.sleep(MIN_INTERVAL)
-            s = fred.get_series(series_id, observation_start=START_DATE)
-            # s is a pandas Series with DatetimeIndex
-            data = {d.strftime("%Y-%m-%d"): (None if v != v else v)   # NaN → None
-                    for d, v in s.items()}
-            results[series_id] = data
-            print(f"OK ({len(data)} obs)")
-            break
-        except Exception as e:
-            wait = MIN_INTERVAL * (2 ** attempt)
-            print(f"retry {attempt}/{MAX_RETRIES} ({e})", end=" ", flush=True)
-            time.sleep(wait)
-    else:
-        print("FAILED")
-        failed.append(series_id)
-
-# Write raw observations to JSON for build_database.py
-out_path = OUTPUT_DIR / "raw_observations.json"
-with open(out_path, "w") as f:
-    json.dump(results, f)
-
-print(f"\nDone. {len(results)} series saved to {out_path}")
-if failed:
-    print(f"Failed series ({len(failed)}): {failed}")
+def fetch_series_dict(series_dict, label):
+    """Fetch every series in `series_dict` and return ({sid: {date: value}}, failed_list)."""
+    results, failed = {}, []
+    n = len(series_dict)
+    for i, series_id in enumerate(series_dict, 1):
+        print(f"[{label} {i}/{n}] Fetching {series_id} … ", end="", flush=True)
+        for attempt in range(1, MAX_RETRIES + 1):
+            try:
+                time.sleep(MIN_INTERVAL)
+                s = fred.get_series(series_id, observation_start=START_DATE)
+                results[series_id] = {
+                    d.strftime("%Y-%m-%d"): (None if v != v else v)
+                    for d, v in s.items()
+                }
+                print(f"OK ({len(results[series_id])} obs)")
+                break
+            except Exception as e:
+                wait = MIN_INTERVAL * (2 ** attempt)
+                print(f"retry {attempt}/{MAX_RETRIES} ({e})", end=" ", flush=True)
+                time.sleep(wait)
+        else:
+            print("FAILED")
+            failed.append(series_id)
+    return results, failed
 
 
-# ── v2 additive fetch ─────────────────────────────────────────────────────
-# Fetches the FRED_SERIES_V2 series into a SEPARATE file so v1's
-# raw_observations.json stays byte-equivalent.
-results_v2 = {}
-failed_v2 = []
-for i, (series_id, meta) in enumerate(FRED_SERIES_V2.items(), 1):
-    print(f"[v2 {i}/{len(FRED_SERIES_V2)}] Fetching {series_id} … ",
-          end="", flush=True)
-    for attempt in range(1, MAX_RETRIES + 1):
-        try:
-            time.sleep(MIN_INTERVAL)
-            s = fred.get_series(series_id, observation_start=START_DATE)
-            data = {d.strftime("%Y-%m-%d"): (None if v != v else v)
-                    for d, v in s.items()}
-            results_v2[series_id] = data
-            print(f"OK ({len(data)} obs)")
-            break
-        except Exception as e:
-            wait = MIN_INTERVAL * (2 ** attempt)
-            print(f"retry {attempt}/{MAX_RETRIES} ({e})", end=" ", flush=True)
-            time.sleep(wait)
-    else:
-        print("FAILED")
-        failed_v2.append(series_id)
+def write_results(results, failed, out_name, label):
+    out_path = OUTPUT_DIR / out_name
+    with open(out_path, "w") as f:
+        json.dump(results, f)
+    print(f"\n[{label}] Done. {len(results)} series saved to {out_path}")
+    if failed:
+        print(f"[{label}] Failed series ({len(failed)}): {failed}")
 
-out_path_v2 = OUTPUT_DIR / "raw_observations_v2.json"
-with open(out_path_v2, "w") as f:
-    json.dump(results_v2, f)
 
-print(f"\n[v2] Done. {len(results_v2)} series saved to {out_path_v2}")
-if failed_v2:
-    print(f"[v2] Failed series ({len(failed_v2)}): {failed_v2}")
+if __name__ == "__main__":
+    r1, f1 = fetch_series_dict(FRED_SERIES,    "v1")
+    write_results(r1, f1, "raw_observations.json",    "v1")
+    r2, f2 = fetch_series_dict(FRED_SERIES_V2, "v2")
+    write_results(r2, f2, "raw_observations_v2.json", "v2")

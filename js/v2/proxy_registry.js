@@ -24,9 +24,6 @@
  * Frequency enum: D | W | M | Q | irregular
  * Units enum:     Mil. USD | Bil. USD | Percent | bps | Count | Index | Ratio
  *
- * EDGE_PROXIES preserves the legacy shape (volume/price proxies) — out of
- * scope for D-002 which only governs NODE_PROXIES.
- *
  * Empirical numbers populated from data/json/proxy_empirical.json
  * (produced by data/proxy_validation.py, S2.2 harness).
  *
@@ -381,86 +378,7 @@ export const NODE_PROXIES = {
   },
 };
 
-// ──────────────────────────────────────────────────────────────────────
-// Edge proxies (legacy shape — out of scope for D-002; preserved verbatim).
-// ──────────────────────────────────────────────────────────────────────
-export const EDGE_PROXIES = {
-  fed_funds: {
-    volume_proxy: { source: "NYFed",  series: "effr",                  metric: "volume" },
-    price_proxy:  { source: "Derived", series: "effr_iorb_spread_bps" },
-    rationale: "EFFR daily volume is small ($70-120B); the spread is the real signal — < -10bp suggests GSE pressure.",
-  },
-  triparty_repo: {
-    volume_proxy: { source: "External", series: "ofr_triparty_volume" },
-    price_proxy:  { source: "Derived",  series: "tgcr_iorb_spread_bps" },
-    rationale: "$4-5T daily; persistent TGCR > IORB indicates strong reserve demand from banks.",
-    proxy_status: "partial",
-  },
-  bilateral_repo: {
-    volume_proxy: { source: "External", series: "ofr_cleared_bilateral_repo" },
-    price_proxy:  { source: "Derived",  series: "bgcr_tgcr_spread_bps" },
-    rationale: "Bilateral spread widening → dealer balance-sheet tightness.",
-    proxy_status: "partial",
-  },
-  sponsored_repo: {
-    volume_proxy: { source: "External", series: "ofr_cleared_repo_sponsored" },
-    price_proxy:  { source: "Derived",  series: "sofr_p99_median_gap_bps" },
-    rationale: "Sponsored cleared volume proxies HF leverage; 99th-percentile jumps foreshadow tail stress.",
-    proxy_status: "partial",
-  },
-  on_rrp: {
-    volume_proxy:        { source: "FRED",    series: "RRPONTTLD" },
-    price_proxy:         { source: "Derived", series: "rrp_tbill4w_spread_bps" },
-    counterparties_proxy:{ source: "NYFed",   series: "rrp_ops", metric: "counterparties" },
-    rationale: "Positive spread → MMF parks at RRP; negative → drains to bills. Counterparty count leads usage by 1-2 months. R009 fix S2.3: series RPONTSYD → RRPONTTLD; metric acceptedCounterparties → counterparties.",
-  },
-  srf: {
-    volume_proxy: { source: "NYFed",  series: "srf_ops",            metric: "amt_accepted" },
-    price_proxy:  { source: "Derived", series: "srf_sofr_p99_gap_bps" },
-    rationale: "Normally zero; any non-zero use is a danger signal (2024-09-30, 2024-12-31 already triggered).",
-  },
-  discount_window: {
-    volume_proxy: { source: "FRED",    series: "WLCFLPCL" },
-    price_proxy:  { source: "Derived", series: "pcr_iorb_spread_bps" },
-    rationale: "Stigma-suppressed; spiked to $150B+ during the 2023-03 SVB week.",
-  },
-  commercial_paper: {
-    volume_proxy: { source: "FRED", series: "COMPAPER" },
-    price_proxy:  { source: "FRED", series: "DCPF1M" },
-    rationale: "DCPF1M-OIS > 50bp marks corporate short-funding stress.",
-  },
-  fx_swaps: {
-    volume_proxy: { source: "FRED",     series: "H41RESPPALDKNWW" },
-    price_proxy:  { source: "External", series: "eur_usd_3m_basis", note: "BIS USD basis monthly CSV (D-001 IN; paid Bloomberg rejected)." },
-    rationale: "FX basis < -50bp = offshore stress; led SOFR in 2020-03, 2022-09 and 2023-03.",
-    proxy_status: "partial",
-  },
-  treasury_issuance: {
-    volume_proxy: { source: "Treasury", series: "auctions_btc_by_term", metric: "total_accepted" },
-    price_proxy:  { source: "Treasury", series: "auctions_btc_by_term", metric: "high_yield" },
-    rationale: "T-bill stop-out minus ON RRP rate is the fundamental driver of RRP balance direction.",
-  },
-  iorb_corridor: {
-    volume_proxy: { source: "FRED", series: "WRESBAL" },
-    price_proxy:  { source: "FRED", series: "IORB" },
-    rationale: "IORB and ON RRP rate form the corridor; floor = excess liquidity, cap = tight liquidity.",
-  },
-
-  // Edges where no clean public proxy exists
-  eurodollar: {
-    proxy_status: "not_found",
-    rationale: "Post-LIBOR (2023-06) there is no daily offshore-USD volume; BIS LBS is quarterly and lagged.",
-    fallback:  "Use EUR-USD FX basis as stress proxy (already covered on the fx_swaps edge).",
-  },
-};
-
 /** Convenience: return the proxy record for a node id, or null. */
 export function getNodeProxy(nodeId) {
   return NODE_PROXIES[nodeId] ?? null;
-}
-
-/** Convenience: return the proxy record for an edge transaction_type, or null. */
-export function getEdgeProxy(transactionType) {
-  if (!transactionType) return null;
-  return EDGE_PROXIES[transactionType] ?? null;
 }

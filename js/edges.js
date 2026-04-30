@@ -9,7 +9,7 @@ import { ROUTING, EDGE_STYLE } from "./config.js";
 import { isSelecting } from "./tooltip.js";
 
 const { FED_PANEL_RIGHT, CORRIDOR_X, MIN_GAP, DASH_OVERLAP_MIN, OFFSET_PX: ROUTING_OFFSET_PX, PAD } = ROUTING;
-const { STROKE_WIDTH: EDGE_STROKE_WIDTH, EMPTY_VALUE_STROKE_WIDTH, HOVER_WIDTH } = EDGE_STYLE;
+const { EMPTY_VALUE_STROKE_WIDTH, HOVER_WIDTH } = EDGE_STYLE;
 
 // Global allocation state (reset each render)
 const allocatedNodePorts = new Map();       // endpointId -> [{x,y}]
@@ -879,61 +879,6 @@ function isPolylineBlocked(waypoints, excludeIds, ownerOptions = {}) {
   return false;
 }
 
-// ══════════════════════════════════════════════════════════════════════════
-// Phase 3: Port allocation — distance-based with sorted scan & convergence
-// ══════════════════════════════════════════════════════════════════════════
-
-// Tracks which local-port index has been assigned for each (nodeId, direction).
-const usedPorts = new Map(); // key: `${nodeId}_${dir}` → Set of port indices
-
-/**
- * Allocate the best available port on *node* facing toward *target*.
- * Uses distance-sorted scan with early termination (convergence after 5 non-improving).
- * Guarantees port uniqueness per (nodeId, dir).
- */
-function allocatePort(nodeId, targetX, targetY, dir) {
-  const node = nodeMap[nodeId];
-  if (!node) return { x: 0, y: 0 };
-
-  const ports = nodeEndpointCandidates(nodeId);
-  if (!ports || ports.length === 0) return { x: node.x, y: node.y };
-
-  const key = `${nodeId}_${dir}`;
-  if (!usedPorts.has(key)) usedPorts.set(key, new Set());
-  const taken = usedPorts.get(key);
-
-  // Build distance-sorted index list (only untaken ports)
-  const indices = [];
-  for (let i = 0; i < ports.length; i++) {
-    if (taken.has(i)) continue;
-    const p = ports[i];
-    const dx = p.x - targetX;
-    const dy = p.y - targetY;
-    indices.push({ i, dist: Math.min(Math.abs(dx), Math.abs(dy)) });
-  }
-  indices.sort((a, b) => a.dist - b.dist);
-
-  // Pick the closest available port (convergence is already guaranteed by sorted order)
-  let bestIdx = indices.length > 0 ? indices[0].i : 0;
-
-  // Fallback: if all ports taken, scan all for closest
-  if (indices.length === 0) {
-    let bestDist = Infinity;
-    for (let i = 0; i < ports.length; i++) {
-      const p = ports[i];
-      const dx = p.x - targetX;
-      const dy = p.y - targetY;
-      const d = Math.min(Math.abs(dx), Math.abs(dy));
-      if (d < bestDist) { bestDist = d; bestIdx = i; }
-    }
-  } else {
-    taken.add(bestIdx);
-  }
-
-  const p = ports[bestIdx];
-  return { x: p.x, y: p.y };
-}
-
 function edgeConnectionType(edge) {
   if (edge.connectionType === EDGE_CONNECTION_TYPES.SELF || edge.source === edge.target) {
     return EDGE_CONNECTION_TYPES.SELF;
@@ -1726,11 +1671,6 @@ function findPolylineRoute(sx, sy, ex, ey, excludeIds, offset, routeContext = {}
   };
 }
 
-/** Label position — uses the _labelPos computed by edgePath. */
-function labelPos(edge) {
-  return edge._labelPos || { x: 0, y: 0 };
-}
-
 /** Get resolved hex color for an edge. */
 function edgeColor(edge) {
   return EDGE_COLORS[edge.color]?.color ?? "#999";
@@ -1760,7 +1700,6 @@ export function defineMarkers(defs) {
  */
 export function renderEdges(layer, { onEdgeHover, onEdgeOut }) {
   // Reset global allocation state before each full re-render
-  usedPorts.clear();
   allocatedNodePorts.clear();
   usedCorridors.clear();
   routedSegments.length = 0;
@@ -1809,14 +1748,6 @@ export function renderEdges(layer, { onEdgeHover, onEdgeOut }) {
         .attr("pointer-events", "none");
   });
 
-  // Value label background
-  g.append("rect")
-    .attr("class", "edge-label-bg")
-    .attr("rx", 3).attr("ry", 3)
-    .attr("fill", "#fff")
-    .attr("opacity", 0.88)
-    .attr("visibility", "hidden");
-
   // Hover target (invisible wider path for easy hovering)
   g.append("path")
     .attr("class", "edge-hover-zone")
@@ -1828,46 +1759,5 @@ export function renderEdges(layer, { onEdgeHover, onEdgeOut }) {
     .on("mouseenter", (event, d) => { if (!isSelecting()) onEdgeHover?.(d, event); })
     .on("mouseleave", () => onEdgeOut?.());
 
-  // Value label — L7: Edge flow label (rendered AFTER hover-zone → on top, selectable)
-  g.append("text")
-    .attr("class", "edge-label")
-    .attr("text-anchor", "middle")
-    .attr("font-size", "16px")   /* L7 — var(--fs-edge-label) in diagram.css */
-    .attr("font-weight", "600")
-    .attr("fill", "#333")
-    .attr("pointer-events", "auto")
-    .each(function (d) {
-      const pos = labelPos(d);
-      d3.select(this).attr("x", pos.x).attr("y", pos.y);
-    });
-
   return g;
-}
-
-/**
- * Update edge value labels.
- */
-export function updateEdgeLabels(edgeGroup, values, metadata, formatValue) {
-  edgeGroup.each(function (d) {
-    const g = d3.select(this);
-    const textEl = g.select(".edge-label");
-    const bgEl   = g.select(".edge-label-bg");
-    const pathEl = g.select(".edge-stroke");
-
-    let display = "";
-
-    textEl.text(display);
-    pathEl.attr("stroke-width", display ? EDGE_STROKE_WIDTH : EMPTY_VALUE_STROKE_WIDTH);
-
-    if (display) {
-      const bbox = textEl.node().getBBox();
-      bgEl.attr("x", bbox.x - 3)
-          .attr("y", bbox.y - 1)
-          .attr("width", bbox.width + 6)
-          .attr("height", bbox.height + 2)
-          .attr("visibility", "visible");
-    } else {
-      bgEl.attr("visibility", "hidden");
-    }
-  });
 }
